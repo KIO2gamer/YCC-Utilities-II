@@ -2,6 +2,7 @@ from unicodedata import normalize
 from random import randint
 
 from discord.ext import commands
+from discord.utils import utcnow
 from discord import (
     HTTPException,
     Member,
@@ -93,14 +94,11 @@ class ModerationCommands(commands.Cog):
     @commands.command(
         name='warn',
         aliases=['w'],
-        description='Formally warns a user, creates a new modlogs entry and DMs them the reason.',
+        description='Formally warns a user, creates a new modlog entry and DMs them the reason.',
         extras={'requirement': 1}
     )
     async def warn(self, ctx: CustomContext, user: User, *, reason: str = _reason):
         await self.bot.check_target_member(user)
-
-        modlog_data = await ctx.to_modlog_data(user.id, reason=reason)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
 
         sent = False
         try:
@@ -113,6 +111,39 @@ class ModerationCommands(commands.Cog):
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
         await self.bot.good_embed(ctx, f'Warned {user.mention}: {reason}{self._sent_mapping[sent]}')
+
+    @commands.command(
+        name='mute',
+        aliases=['m', 'timeout'],
+        description='Puts a user in timeout, creates a new modlog entry and DMs them the reason.',
+        extras={'requirement': 2}
+    )
+    @commands.bot_has_permissions(moderate_members=True)
+    async def mute(self, ctx: CustomContext, user: User, duration: str, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        _time_delta = self.bot.convert_duration(duration)
+        seconds = _time_delta.total_seconds()
+        until = round(utcnow().timestamp() + seconds)
+
+        member = await self.bot.user_to_member(user)
+        if isinstance(member, Member):
+            if member.is_timed_out() is True:
+                raise Exception(f'{member.mention} is already muted.')
+            else:
+                await member.timeout(_time_delta)
+
+        sent = False
+        try:
+            await self.bot.bad_embed(user, f'**You were muted in {self.bot.guild} until <t:{until}:F> for:** {reason}')
+            sent = True
+        except HTTPException:
+            pass
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Muted {user.mention} until <t:{until}:F>: {reason}{self._sent_mapping[sent]}')
 
 
 async def setup(bot: CustomBot):

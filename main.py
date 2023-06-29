@@ -1,7 +1,8 @@
 import os
 import asyncio
 import logging
-from typing import Union
+from datetime import timedelta
+from typing import Union, Optional
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -26,6 +27,7 @@ try:
     # Local imports
     from resources import config
     from core.mongo import MongoDBClient
+    from core.errors import DurationError
     from core.context import CustomContext, enforce_clearance
 
 except ModuleNotFoundError as unknown_import:
@@ -34,6 +36,8 @@ except ModuleNotFoundError as unknown_import:
 
 
 class CustomBot(commands.Bot):
+
+    _duration_mapping = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800, 'y': 31536000}
 
     def __init__(self):
 
@@ -55,6 +59,12 @@ class CustomBot(commands.Bot):
 
         self.add_check(enforce_clearance, call_once=True)
 
+    def convert_duration(self, duration: str) -> timedelta:
+        try:
+            return timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
+        except (KeyError, ValueError):
+            raise DurationError()
+
     @staticmethod
     async def basic_embed(destination: Messageable, message: str, color: Color, view: View = MISSING) -> Message:
         embed = Embed(description=message, color=color)
@@ -68,6 +78,12 @@ class CustomBot(commands.Bot):
 
     async def bad_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
         return await self.basic_embed(destination, message, Color.red(), view=view)
+
+    async def user_to_member(self, user: User) -> Optional[Member]:
+        try:
+            return self.guild.get_member(user.id) or await self.guild.fetch_member(user.id)
+        except HTTPException:
+            return
 
     async def member_clearance(self, member: Union[User, Member]) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
@@ -114,6 +130,9 @@ class CustomBot(commands.Bot):
 
         elif isinstance(error, commands.BadArgument):
             message = 'Incorrect argument type(s).'
+
+        elif isinstance(error, commands.CommandInvokeError):
+            message = str(error.original)
 
         else:
             message = f'An unexpected error occurred: {error}'
