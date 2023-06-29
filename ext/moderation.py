@@ -124,7 +124,10 @@ class ModerationCommands(commands.Cog):
 
         _time_delta = self.bot.convert_duration(duration)
         seconds = _time_delta.total_seconds()
-        until = round(utcnow().timestamp() + seconds)
+        til = round(utcnow().timestamp() + seconds)
+
+        if not 60 <= seconds <= 2419200:
+            raise Exception('Duration must be between 1 minute and 28 days.')
 
         member = await self.bot.user_to_member(user)
         if isinstance(member, Member):
@@ -135,7 +138,7 @@ class ModerationCommands(commands.Cog):
 
         sent = False
         try:
-            await self.bot.bad_embed(user, f'**You were muted in {self.bot.guild} until <t:{until}:F> for:** {reason}')
+            await self.bot.bad_embed(user, f'**You were muted in {self.bot.guild} until <t:{til}:F> for:** {reason}')
             sent = True
         except HTTPException:
             pass
@@ -143,7 +146,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Muted {user.mention} until <t:{until}:F>: {reason}{self._sent_mapping[sent]}')
+        await self.bot.good_embed(ctx, f'Muted {user.mention} until <t:{til}:F>: {reason}{self._sent_mapping[sent]}')
 
 
 async def setup(bot: CustomBot):
