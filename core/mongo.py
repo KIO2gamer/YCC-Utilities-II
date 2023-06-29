@@ -51,7 +51,7 @@ class MongoDBClient:
         await self._session.end_session()
         return False
 
-    async def get_metadata(self):
+    async def get_metadata(self) -> dict:
         data = await self.metadata.find_one({}, session=self._session)
 
         if data is None:

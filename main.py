@@ -48,7 +48,7 @@ class CustomBot(commands.Bot):
         self.metadata = {}
         self.bans = []
 
-    async def member_clearance(self, member: Union[User, Member]):
+    async def member_clearance(self, member: Union[User, Member]) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
             return 9
         elif isinstance(member, User):
