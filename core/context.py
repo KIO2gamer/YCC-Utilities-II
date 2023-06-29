@@ -20,6 +20,7 @@ class CustomContext(commands.Context):
             'reason': kwargs.get('reason', 'No reason provided.'),
             'created': round(utcnow().timestamp()),
             'duration': kwargs.get('duration', 0),
+            'received': kwargs.get('received', False),
             'active': _type in self.__enduring__,
             'deleted': False
         }

@@ -21,8 +21,8 @@ class ModLogEntry:
         self.created: int = kwargs.get('created', 0)
         self.duration: int = kwargs.get('duration', 0)
 
+        self.received: bool = kwargs.get('received', False)
         self.active: bool = kwargs.get('active', False)
-
         self.deleted: bool = kwargs.get('deleted', False)
 
     @property

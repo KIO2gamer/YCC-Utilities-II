@@ -67,7 +67,7 @@ class CustomBot(commands.Bot):
         return await self.basic_embed(destination, message, Color.green(), view=view)
 
     async def bad_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
-        return await self.basic_embed(destination, f'❌ {message}', Color.red(), view=view)
+        return await self.basic_embed(destination, message, Color.red(), view=view)
 
     async def member_clearance(self, member: Union[User, Member]) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
@@ -121,7 +121,7 @@ class CustomBot(commands.Bot):
         if reset_cooldown is True:
             ctx.command.reset_cooldown(ctx)
 
-        await self.bad_embed(ctx, message)
+        await self.bad_embed(ctx, f'❌ {message}')
 
     async def on_message(self, message: Message) -> None:
         if message.guild is None or message.guild.id != self.guild_id:

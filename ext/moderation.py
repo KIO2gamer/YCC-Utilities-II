@@ -3,7 +3,9 @@ from random import randint
 
 from discord.ext import commands
 from discord import (
-    Member
+    HTTPException,
+    Member,
+    User
 )
 
 from main import CustomBot
@@ -13,6 +15,7 @@ from core.context import CustomContext
 class ModerationCommands(commands.Cog):
 
     _reason = 'No reason provided.'
+    _sent_mapping = {True: '', False: ' (I could not DM them)'}
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -24,28 +27,92 @@ class ModerationCommands(commands.Cog):
         extras={'requirement': 1}
     )
     @commands.bot_has_permissions(manage_nicknames=True)
-    async def decancer(self, ctx: CustomContext, *, member: Member):
+    async def decancer(self, ctx: CustomContext, member: Member, *, reason: str = _reason):
         await self.bot.check_target_member(member)
 
         new_nickname = normalize('NFKD', member.display_name).encode('ascii', 'ignore').decode('utf-8')
         await member.edit(nick=new_nickname)
 
+        modlog_data = await ctx.to_modlog_data(member.id, reason=reason)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
         await self.bot.good_embed(ctx, f'Changed {member.mention}\'s nickname.')
 
     @commands.command(
         name='modnick',
-        aliases=['mn'],
+        aliases=['mn', 'nick'],
         description='Assigns a randomly-generated nickname to a member.',
         extras={'requirement': 1}
     )
     @commands.bot_has_permissions(manage_nicknames=True)
-    async def modnick(self, ctx: CustomContext, *, member: Member):
+    async def modnick(self, ctx: CustomContext, member: Member, *, reason: str = _reason):
         await self.bot.check_target_member(member)
 
         new_nickname = f'Moderated Nickname-{hex(randint(1, 10000000))}'
         await member.edit(nick=new_nickname)
 
+        modlog_data = await ctx.to_modlog_data(member.id, reason=reason)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
         await self.bot.good_embed(ctx, f'Changed {member.mention}\'s nickname.')
+
+    @commands.command(
+        name='note',
+        aliases=['n', 'addnote'],
+        description='Add a note for a user. This will be visible in their modlogs.',
+        extras={'requirement': 1}
+    )
+    async def note(self, ctx: CustomContext, user: User, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Note added for {user.mention}.')
+
+    @commands.command(
+        name='dm',
+        aliases=['message', 'send'],
+        description='Attempts to send an anonymous DM to a member. This will be visible in their modlogs.',
+        extras={'requirement': 1}
+    )
+    async def dm(self, ctx: CustomContext, user: User, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        try:
+            await self.bot.neutral_embed(user, f'**You received a message from {self.bot.guild}:** {reason}')
+        except HTTPException:
+            await self.bot.bad_embed(ctx, f'❌ Unable to message {user.mention}.')
+            return
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=True)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Message sent to {user.mention}.')
+
+    @commands.command(
+        name='warn',
+        aliases=['w'],
+        description='Formally warns a user, creates a new modlogs entry and DMs them the reason.',
+        extras={'requirement': 1}
+    )
+    async def warn(self, ctx: CustomContext, user: User, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        sent = False
+        try:
+            await self.bot.bad_embed(user, f'**You received a warning in {self.bot.guild} for:** {reason}')
+            sent = True
+        except HTTPException:
+            pass
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Warned {user.mention}: {reason}{self._sent_mapping[sent]}')
 
 
 async def setup(bot: CustomBot):
