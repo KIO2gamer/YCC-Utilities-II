@@ -1,6 +1,7 @@
 import logging
 
 from certifi import where
+from pymongo import ReturnDocument
 from pymongo.errors import (
     ConfigurationError,
     ServerSelectionTimeoutError
@@ -101,3 +102,16 @@ class MongoDBClient:
     async def insert_modlog(self, **kwargs) -> ModLogEntry:
         await self.modlogs.insert_one(kwargs, session=self._session)
         return ModLogEntry(self.bot, **kwargs)
+
+    async def update_modlog(self, case_id: int, **kwargs) -> ModLogEntry:
+        data = await self.modlogs.find_one_and_update(
+            {'case_id': case_id},
+            {'$set': kwargs},
+            return_document=ReturnDocument.AFTER,
+            session=self._session
+        )
+
+        if data is None:
+            raise ModLogNotFound(case_id)
+
+        return data
