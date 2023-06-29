@@ -10,6 +10,7 @@ try:
         __version__ as __discord__,
         Intents,
         Message,
+        HTTPException,
         LoginFailure,
         PrivilegedIntentsRequired
     )
@@ -53,6 +54,21 @@ class CustomBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         logging.info(f'Logging in as {self.user.name} (ID: {self.user.id})...')
+
+        try:
+            owners = [await self.fetch_user(_id) for _id in self.owner_ids]
+            guild = await self.fetch_guild(self.guild_id)
+            logging.info(f'Owner(s): {", ".join([owner.name for owner in owners])}')
+            logging.info(f'Guild: {guild.name}')
+
+        except HTTPException:
+            logging.fatal('Invalid IDs passed. Please check your config.py file is correct.')
+            raise SystemExit()
+
+        logging.info('Fetching guild bans, this may take a while...')
+        self.bans = [entry.user.id async for entry in guild.bans(limit=None)]
+
+        self.metadata = await self.mongo_db.get_metadata()
 
     def run_bot(self) -> None:
 

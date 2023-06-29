@@ -1,0 +1,3 @@
+class ModLogEntry:
+
+    pass
