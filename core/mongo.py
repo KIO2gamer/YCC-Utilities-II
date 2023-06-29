@@ -91,17 +91,22 @@ class MongoDBClient:
 
         return data
 
-    async def get_modlog(self, case_id: int) -> ModLogEntry:
-        data = await self.modlogs.find_one({'case_id': case_id}, session=self._session)
-
-        if data is None:
-            raise ModLogNotFound(case_id)
-
-        return ModLogEntry(self.bot, **data)
+    async def generate_id(self) -> int:
+        return 1 \
+            + await self.modlogs.count_documents({}, session=self._session)
 
     async def insert_modlog(self, **kwargs) -> ModLogEntry:
         await self.modlogs.insert_one(kwargs, session=self._session)
         return ModLogEntry(self.bot, **kwargs)
+
+    async def search_modlog(self, **kwargs) -> list[ModLogEntry]:
+        data = self.modlogs.find(kwargs, session=self._session)
+        modlogs = [ModLogEntry(self.bot, **entry) async for entry in data]
+
+        if not modlogs:
+            raise ModLogNotFound()
+
+        return modlogs
 
     async def update_modlog(self, case_id: int, **kwargs) -> ModLogEntry:
         data = await self.modlogs.find_one_and_update(
@@ -112,6 +117,6 @@ class MongoDBClient:
         )
 
         if data is None:
-            raise ModLogNotFound(case_id)
+            raise ModLogNotFound()
 
         return data
