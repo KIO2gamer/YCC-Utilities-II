@@ -129,6 +129,8 @@ class ModerationCommands(commands.Cog):
         except HTTPException:
             pass
 
+        await member.kick()
+
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
