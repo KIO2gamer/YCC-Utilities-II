@@ -113,6 +113,28 @@ class ModerationCommands(commands.Cog):
         await self.bot.good_embed(ctx, f'Warned {user.mention}: {reason}{self._sent_mapping[sent]}')
 
     @commands.command(
+        name='kick',
+        aliases=['k', 'remove'],
+        desription='Kicks a member from the guild, creates a new modlog entry and DMs them the reason.',
+        extras={'requirement': 2}
+    )
+    @commands.bot_has_permissions(kick_members=True)
+    async def kick(self, ctx: CustomContext, member: Member, *, reason: str = _reason):
+        await self.bot.check_target_member(member)
+
+        sent = False
+        try:
+            await self.bot.bad_embed(member, f'**You were kicked from {self.bot.guild} for:** {reason}')
+            sent = True
+        except HTTPException:
+            pass
+
+        modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Kicked {member.mention}: {reason}{self._sent_mapping[sent]}')
+
+    @commands.command(
         name='mute',
         aliases=['m', 'timeout'],
         description='Puts a user in timeout, creates a new modlog entry and DMs them the reason.',
