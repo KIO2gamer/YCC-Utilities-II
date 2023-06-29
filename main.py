@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from typing import Union
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -12,7 +13,9 @@ try:
         Message,
         HTTPException,
         LoginFailure,
-        PrivilegedIntentsRequired
+        PrivilegedIntentsRequired,
+        User,
+        Member
     )
 
     # Local imports
@@ -41,9 +44,31 @@ class CustomBot(commands.Bot):
             max_messages=5000
         )
         self.guild_id = config.GUILD_ID
-        self.mongo_db = None
+        self.mongo_db = self.guild = None
         self.metadata = {}
         self.bans = []
+
+    async def member_clearance(self, member: Union[User, Member]):
+        if member.id in self.owner_ids or member == self.guild.owner:
+            return 9
+        elif isinstance(member, User):
+            try:
+                member = self.guild.get_member(member.id) or await self.guild.fetch_member(member.id)
+            except HTTPException:
+                return 0
+
+        roles = [role.id for role in member.roles]
+        data = self.metadata
+
+        return \
+            8 if data.get('admin_role') in roles else \
+            7 if data.get('bot_role') in roles else \
+            6 if data.get('senior_role') in roles else \
+            5 if data.get('hmod_role') in roles else \
+            4 if data.get('smod_role') in roles else \
+            3 if data.get('rmod_role') in roles else \
+            2 if data.get('tmod_role') in roles else \
+            1 if data.get('helper_role') in roles else 0
 
     async def on_message(self, message: Message) -> None:
         if message.guild is None or message.guild.id != self.guild_id:
@@ -57,16 +82,16 @@ class CustomBot(commands.Bot):
 
         try:
             owners = [await self.fetch_user(_id) for _id in self.owner_ids]
-            guild = await self.fetch_guild(self.guild_id)
+            self.guild = await self.fetch_guild(self.guild_id)
             logging.info(f'Owner(s): {", ".join([owner.name for owner in owners])}')
-            logging.info(f'Guild: {guild.name}')
+            logging.info(f'Guild: {self.guild.name}')
 
         except HTTPException:
             logging.fatal('Invalid IDs passed. Please check your config.py file is correct.')
             raise SystemExit()
 
         logging.info('Fetching guild bans, this may take a while...')
-        self.bans = [entry.user.id async for entry in guild.bans(limit=None)]
+        self.bans = [entry.user.id async for entry in self.guild.bans(limit=None)]
 
         self.metadata = await self.mongo_db.get_metadata()
 
