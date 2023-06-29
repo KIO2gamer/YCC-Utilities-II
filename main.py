@@ -9,6 +9,7 @@ try:
     from discord import (
         __version__ as __discord__,
         Intents,
+        Message,
         LoginFailure,
         PrivilegedIntentsRequired
     )
@@ -16,6 +17,7 @@ try:
     # Local imports
     from resources import config
     from core.mongo import MongoDBClient
+    from core.context import CustomContext
 
 except ModuleNotFoundError as unknown_import:
     logging.fatal(f'Missing required dependencies - {unknown_import}.')
@@ -41,6 +43,13 @@ class CustomBot(commands.Bot):
         self.mongo_db = None
         self.metadata = {}
         self.bans = []
+
+    async def on_message(self, message: Message) -> None:
+        if message.guild is None or message.guild.id != self.guild_id:
+            return
+
+        ctx = await self.get_context(message, cls=CustomContext)
+        await self.invoke(ctx)
 
     async def setup_hook(self) -> None:
         logging.info(f'Logging in as {self.user.name} (ID: {self.user.id})...')

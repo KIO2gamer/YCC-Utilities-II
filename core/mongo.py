@@ -40,6 +40,6 @@ class MongoDBClient:
             raise SystemExit()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
         await self._session.end_session()
         return False
