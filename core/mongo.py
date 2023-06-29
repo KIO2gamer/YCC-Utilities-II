@@ -12,10 +12,15 @@ from motor.motor_asyncio import (
     AsyncIOMotorClientSession
 )
 
+from core.modlog import ModLogEntry
+from core.errors import ModLogNotFound
+
 
 class MongoDBClient:
 
-    def __init__(self, connection_uri: str):
+    def __init__(self, bot, connection_uri: str):
+        self.bot = bot
+
         try:
             self.client: AsyncIOMotorClient = AsyncIOMotorClient(
                 connection_uri,
@@ -84,3 +89,15 @@ class MongoDBClient:
             return default
 
         return data
+
+    async def get_modlog(self, case_id: int) -> ModLogEntry:
+        data = await self.modlogs.find_one({'case_id': case_id}, session=self._session)
+
+        if data is None:
+            raise ModLogNotFound(case_id)
+
+        return ModLogEntry(self.bot, **data)
+
+    async def insert_modlog(self, **kwargs) -> ModLogEntry:
+        await self.modlogs.insert_one(kwargs, session=self._session)
+        return ModLogEntry(self.bot, **kwargs)

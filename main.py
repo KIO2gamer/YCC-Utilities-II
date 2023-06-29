@@ -73,7 +73,7 @@ class CustomBot(commands.Bot):
     def run_bot(self) -> None:
 
         async def _run_bot():
-            async with self, MongoDBClient(config.MONGO) as self.mongo_db:
+            async with self, MongoDBClient(self, config.MONGO) as self.mongo_db:
                 for filename in os.listdir('./ext'):
                     if filename.endswith('.py'):
                         try:
