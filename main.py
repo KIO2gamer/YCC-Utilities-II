@@ -100,16 +100,21 @@ class CustomBot(commands.Bot):
 
         if isinstance(error, (commands.CheckFailure, commands.CommandNotFound)):
             return
+
         elif isinstance(error, commands.CommandOnCooldown):
             message = f'Wait `{round(error.retry_after)}s` before doing that again.'
             reset_cooldown = False
+
         elif isinstance(error, commands.BotMissingPermissions):
             message = f'Bot missing required permissions: `{", ".join(error.missing_permissions).replace("_", " ")}`.'
+
         elif isinstance(error, (commands.UserNotFound, commands.MemberNotFound,
                                 commands.ChannelNotFound, commands.RoleNotFound)):
             message = f'{error.__class__.__name__[:-8]} not found.'
+
         elif isinstance(error, commands.BadArgument):
             message = 'Incorrect argument type(s).'
+
         else:
             message = f'An unexpected error occurred: {error}'
 
