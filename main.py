@@ -6,7 +6,10 @@ from typing import Union
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 try:
+    from discord.ui import View
     from discord.ext import commands
+    from discord.abc import Messageable
+    from discord.utils import MISSING
     from discord import (
         __version__ as __discord__,
         Intents,
@@ -15,13 +18,15 @@ try:
         LoginFailure,
         PrivilegedIntentsRequired,
         User,
-        Member
+        Member,
+        Embed,
+        Color
     )
 
     # Local imports
     from resources import config
     from core.mongo import MongoDBClient
-    from core.context import CustomContext
+    from core.context import CustomContext, enforce_clearance
 
 except ModuleNotFoundError as unknown_import:
     logging.fatal(f'Missing required dependencies - {unknown_import}.')
@@ -48,6 +53,22 @@ class CustomBot(commands.Bot):
         self.metadata = {}
         self.bans = []
 
+        self.add_check(enforce_clearance, call_once=True)
+
+    @staticmethod
+    async def basic_embed(destination: Messageable, message: str, color: Color, view: View = MISSING) -> Message:
+        embed = Embed(description=message, color=color)
+        return await destination.send(embed=embed, view=view)
+
+    async def neutral_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
+        return await self.basic_embed(destination, message, Color.blue(), view=view)
+
+    async def good_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
+        return await self.basic_embed(destination, message, Color.green(), view=view)
+
+    async def bad_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
+        return await self.basic_embed(destination, f'❌ {message}', Color.red(), view=view)
+
     async def member_clearance(self, member: Union[User, Member]) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
             return 9
@@ -69,6 +90,33 @@ class CustomBot(commands.Bot):
             3 if data.get('rmod_role') in roles else \
             2 if data.get('tmod_role') in roles else \
             1 if data.get('helper_role') in roles else 0
+
+    async def check_target_member(self, member: Union[User, Member]) -> None:
+        if await self.member_clearance(member) > 0:
+            raise commands.CheckFailure('The target of this moderation is protected.')
+
+    async def on_command_error(self, ctx: CustomContext, error: commands.CommandError) -> None:
+        reset_cooldown = True
+
+        if isinstance(error, (commands.CheckFailure, commands.CommandNotFound)):
+            return
+        elif isinstance(error, commands.CommandOnCooldown):
+            message = f'Wait `{round(error.retry_after)}s` before doing that again.'
+            reset_cooldown = False
+        elif isinstance(error, commands.BotMissingPermissions):
+            message = f'Bot missing required permissions: `{", ".join(error.missing_permissions).replace("_", " ")}`.'
+        elif isinstance(error, (commands.UserNotFound, commands.MemberNotFound,
+                                commands.ChannelNotFound, commands.RoleNotFound)):
+            message = f'{error.__class__.__name__[:-8]} not found.'
+        elif isinstance(error, commands.BadArgument):
+            message = 'Incorrect argument type(s).'
+        else:
+            message = f'An unexpected error occurred: {error}'
+
+        if reset_cooldown is True:
+            ctx.command.reset_cooldown(ctx)
+
+        await self.bad_embed(ctx, message)
 
     async def on_message(self, message: Message) -> None:
         if message.guild is None or message.guild.id != self.guild_id:
