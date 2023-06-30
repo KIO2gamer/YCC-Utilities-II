@@ -28,6 +28,7 @@ try:
     from resources import config
     from core.mongo import MongoDBClient
     from core.errors import DurationError
+    from core.embed import EmbedField, CustomEmbed
     from core.context import CustomContext, enforce_clearance
 
 except ModuleNotFoundError as unknown_import:
@@ -64,6 +65,29 @@ class CustomBot(commands.Bot):
             return timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
         except (KeyError, ValueError):
             raise DurationError()
+
+    @staticmethod
+    def _new_embed(**kwargs) -> CustomEmbed:
+        return CustomEmbed(
+            title=kwargs.get('title'),
+            description=kwargs.get('description'),
+            color=kwargs.get('color', Color.blue()),
+            timestamp=kwargs.get('timestamp')
+        )
+
+    def fields_to_embeds(self, fields: list[EmbedField], **kwargs) -> list[CustomEmbed]:
+        embed_list = [self._new_embed(**kwargs)]
+
+        for field in fields:
+            if len(embed_list[-1].fields) > kwargs.get('field_limit', 5) - 1:
+                embed_list.append(self._new_embed(**kwargs))
+            embed_list[-1].append_field(field)
+
+        for embed in embed_list:
+            embed.set_author(name=kwargs.get('author_name'), icon_url=kwargs.get('author_icon'))
+            embed.set_footer(text=f'Page {embed_list.index(embed) + 1} of {len(embed_list)}')
+
+        return embed_list
 
     @staticmethod
     async def basic_embed(destination: Messageable, message: str, color: Color, view: View = MISSING) -> Message:
