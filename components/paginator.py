@@ -61,9 +61,7 @@ class Paginator(ui.View):
         return True
 
     async def on_timeout(self) -> None:
-        for button in self.children:
-            button.disabled = True
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(view=None)
         except HTTPException:
             pass

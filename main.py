@@ -83,8 +83,11 @@ class CustomBot(commands.Bot):
                 embed_list.append(self._new_embed(**kwargs))
             embed_list[-1].append_field(field)
 
+        author_name = kwargs.get('author_name')
+        author_icon = kwargs.get('author_icon')
         for embed in embed_list:
-            embed.set_author(name=kwargs.get('author_name'), icon_url=kwargs.get('author_icon'))
+            if author_name and author_icon:
+                embed.set_author(name=author_name, icon_url=author_icon)
             embed.set_footer(text=f'Page {embed_list.index(embed) + 1} of {len(embed_list)}')
 
         return embed_list

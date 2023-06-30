@@ -13,3 +13,9 @@ class CustomEmbed(Embed):
 
     def append_field(self, field: EmbedField):
         self.add_field(name=field.name, value=field.text, inline=field.inline)
+
+    def reverse_fields(self):
+        try:
+            self._fields.reverse()
+        except AttributeError:
+            pass
