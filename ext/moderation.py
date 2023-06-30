@@ -1,4 +1,5 @@
 from unicodedata import normalize
+from datetime import timedelta
 from random import randint
 
 from discord.ext import commands
@@ -10,6 +11,7 @@ from discord import (
 )
 
 from main import CustomBot
+from core.errors import DurationError
 from core.context import CustomContext
 
 
@@ -17,6 +19,7 @@ class ModerationCommands(commands.Cog):
 
     _reason = 'No reason provided.'
     _sent_mapping = {True: '', False: ' (I could not DM them)'}
+    _perm_duration = 2 ** 32 - 1
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -171,6 +174,46 @@ class ModerationCommands(commands.Cog):
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
         await self.bot.good_embed(ctx, f'Muted {user.mention} until <t:{til}:F>: {reason}{self._sent_mapping[sent]}')
+
+    @commands.command(
+        name='ban',
+        aliases=['b'],
+        description='Bans a user from the guild, creates a new modlogs entry and DMs them the reason.',
+        extras={'requirement': 2}
+    )
+    @commands.bot_has_permissions(ban_members=True)
+    async def ban(self, ctx: CustomContext, user: User, duration: str, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        permanent = False
+        try:
+            _time_delta = self.bot.convert_duration(duration)
+        except DurationError as error:
+            if duration.lower() in 'permanent':
+                permanent = True
+                _time_delta = timedelta(seconds=self._perm_duration)
+            else:
+                raise error
+        seconds = _time_delta.total_seconds()
+        til = round(utcnow().timestamp() + seconds)
+
+        if user.id in self.bot.bans:
+            raise Exception(f'{user.mention} is already banned.')
+
+        until_str = f' until <t:{til}:F>' if permanent is False else ''
+        sent = False
+        try:
+            await self.bot.bad_embed(user, f'**You were banned from {self.bot.guild}{until_str} for:** {reason}')
+            sent = True
+        except HTTPException:
+            pass
+
+        await self.bot.guild.ban(user)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(ctx, f'Banned {user.mention}{until_str}: {reason}{self._sent_mapping[sent]}')
 
 
 async def setup(bot: CustomBot):
