@@ -31,7 +31,7 @@ class ModLogEntry:
 
     @property
     def until(self) -> int:
-        return self.created + self.duration
+        return round(self.created + self.duration)
 
     @property
     def expired(self) -> bool:

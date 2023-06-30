@@ -66,11 +66,12 @@ class ModLogCommands(commands.Cog):
             _type = f'**Type:** {self._type_map.get(modlog.type, modlog.type.capitalize())}\n'
             _reason = f'**Reason:** {modlog.reason} - <t:{modlog.created}:F>\n' if kwargs.get('reason') is True else ''
             _duration = f'**Duration:** `{timedelta(seconds=modlog.duration)}`\n' if modlog.duration else ''
+            _until = f'**Expires:** <t:{modlog.until}:F>' if kwargs.get('until') is True else ''
             _received = f'**Received:** `{modlog.received}`\n' if kwargs.get('received') is True else ''
-            _ongoing = f'**Ongoing:** `{not modlog.expired}`\n' if kwargs.get('ongoing') is True else ''
+            _ongoing = f'**Ongoing:** `{modlog.active}`\n' if kwargs.get('ongoing') is True else ''
             _deleted = f'**Deleted:** `{modlog.deleted}`\n' if kwargs.get('deleted') is True else ''
 
-            text = _user + _type + _channel + _mod + _reason + _duration + _received + _ongoing + _deleted
+            text = _user + _type + _channel + _mod + _reason + _duration + _until + _received + _ongoing + _deleted
 
             fields.append(EmbedField(name=_id, text=text))
 
@@ -84,7 +85,7 @@ class ModLogCommands(commands.Cog):
     )
     async def modlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):
         user = user or ctx.author
-        modlogs = await self.bot.mongo_db.search_modlog(user_id=user.id)
+        modlogs = await self.bot.mongo_db.search_modlog(user_id=user.id, deleted=False)
         filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
         filtered_modlogs.reverse()
 
@@ -94,8 +95,44 @@ class ModLogCommands(commands.Cog):
             embed.reverse_fields()
 
         message = await ctx.send(embed=embeds[0])
-        view = Paginator(ctx.author, message, embeds)
-        await message.edit(view=view)
+        await message.edit(view=Paginator(ctx.author, message, embeds))
+
+    @commands.command(
+        name='moderations',
+        aliases=['activelogs', 'mds'],
+        description='View a list of ongoing moderations.  Flags can be used to filter specific actions.',
+        extras={'requirement': 1}
+    )
+    async def moderations(self, ctx: CustomContext, *, flags: str = ''):
+        modlogs = await self.bot.mongo_db.search_modlog(active=True, deleted=False)
+        filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
+        filtered_modlogs.reverse()
+
+        fields = self._modlogs_to_fields(filtered_modlogs, user=True, until=True)
+        embeds = self.bot.fields_to_embeds(fields, title='Active Moderations')
+        for embed in embeds:
+            embed.reverse_fields()
+
+        message = await ctx.send(embed=embeds[0])
+        await message.edit(view=Paginator(ctx.author, message, embeds))
+
+    @commands.command(
+        name='case',
+        aliases=['findcase'],
+        description='Find a specific modlog entry by case ID.',
+        extras={'requirement': 1}
+    )
+    async def case(self, ctx: CustomContext, case_id: int):
+        modlogs = await self.bot.mongo_db.search_modlog(case_id=case_id, deleted=False)
+        modlogs.reverse()
+
+        fields = self._modlogs_to_fields(modlogs, user=True, mod=True, reason=True, ongoing=True)
+        embeds = self.bot.fields_to_embeds(fields)
+        for embed in embeds:
+            embed.reverse_fields()
+
+        message = await ctx.send(embed=embeds[0])
+        await message.edit(view=Paginator(ctx.author, message, embeds))
 
 
 async def setup(bot: CustomBot):
