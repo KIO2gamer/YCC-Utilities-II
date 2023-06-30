@@ -39,6 +39,7 @@ except ModuleNotFoundError as unknown_import:
 class CustomBot(commands.Bot):
 
     _duration_mapping = {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800, 'y': 31536000}
+    _perm_duration = 2 ** 32 - 1
 
     def __init__(self):
 

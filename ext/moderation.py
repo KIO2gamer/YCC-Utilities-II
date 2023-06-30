@@ -20,7 +20,6 @@ class ModerationCommands(commands.Cog):
 
     _reason = 'No reason provided.'
     _sent_map = {True: '', False: ' (I could not DM them)'}
-    _perm_duration = 2 ** 32 - 1
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -195,7 +194,7 @@ class ModerationCommands(commands.Cog):
         except DurationError as error:
             if duration.lower() in 'permanent':
                 permanent = True
-                _time_delta = timedelta(seconds=self._perm_duration)
+                _time_delta = timedelta(seconds=self.bot._perm_duration)
             else:
                 raise error
         seconds = _time_delta.total_seconds()
@@ -236,7 +235,7 @@ class ModerationCommands(commands.Cog):
         except DurationError as error:
             if duration.lower() in 'permanent':
                 permanent = True
-                _time_delta = timedelta(seconds=self._perm_duration)
+                _time_delta = timedelta(seconds=self.bot._perm_duration)
             else:
                 raise error
         seconds = _time_delta.total_seconds()

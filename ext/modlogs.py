@@ -8,8 +8,8 @@ from discord import (
 from main import CustomBot
 from core.embed import EmbedField
 from core.modlog import ModLogEntry
-from core.errors import ModLogNotFound
 from core.context import CustomContext
+from core.errors import ModLogNotFound, DurationError
 from components.paginator import Paginator
 
 
@@ -133,6 +133,47 @@ class ModLogCommands(commands.Cog):
 
         message = await ctx.send(embed=embeds[0])
         await message.edit(view=Paginator(ctx.author, message, embeds))
+
+    @commands.command(
+        name='reason',
+        aliases=['r'],
+        description='Edit the reason of an existing modlog.',
+        extras={'requirement': 2}
+    )
+    async def reason(self, ctx: CustomContext, case_id: int, *, reason: str):
+        modlog = await self.bot.mongo_db.update_modlog(case_id, _deleted=False, reason=reason)
+        await self.bot.good_embed(ctx, f'**Reason updated for case {modlog.id}:** {reason}')
+
+    @commands.command(
+        name='duration',
+        aliases=['dur'],
+        description='Edit the duration of an active modlog.',
+        extras={'requirement': 3}
+    )
+    async def duration(self, ctx: CustomContext, case_id: int, duration: str):
+        permanent = False
+        try:
+            _time_delta = self.bot.convert_duration(duration)
+        except DurationError as error:
+            if duration.lower() in 'permanent':
+                permanent = True
+                _time_delta = timedelta(seconds=self.bot._perm_duration)
+            else:
+                raise error
+        seconds = _time_delta.total_seconds()
+
+        if not 60 <= seconds <= 2419200:
+            try:
+                modlog = await self.bot.mongo_db.update_modlog(
+                    case_id, _type='ban', _active=True, _deleted=False, duration=seconds)
+            except ModLogNotFound:
+                modlog = await self.bot.mongo_db.update_modlog(
+                    case_id, _type='channel_ban', _active=True, _deleted=False, duration=seconds)
+        else:
+            modlog = await self.bot.mongo_db.update_modlog(case_id, _active=True, _deleted=False, duration=seconds)
+
+        duration_str = '`permanent`' if permanent is True else f'`{_time_delta}` (expires <t:{modlog.until}:R>)'
+        await self.bot.good_embed(ctx, f'**Updated duration for case {case_id} to {duration_str}.**')
 
 
 async def setup(bot: CustomBot):
