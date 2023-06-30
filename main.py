@@ -62,9 +62,12 @@ class CustomBot(commands.Bot):
 
     def convert_duration(self, duration: str) -> timedelta:
         try:
-            return timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
+            td = timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
         except (KeyError, ValueError):
             raise DurationError()
+        if td.total_seconds() < 60:
+            raise DurationError()
+        return td
 
     @staticmethod
     def _new_embed(**kwargs) -> CustomEmbed:
