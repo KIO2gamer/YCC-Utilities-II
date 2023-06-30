@@ -3,6 +3,7 @@ from datetime import timedelta
 from random import randint
 
 from discord.ext import commands
+from discord.abc import GuildChannel
 from discord.utils import utcnow
 from discord import (
     HTTPException,
@@ -18,7 +19,7 @@ from core.context import CustomContext
 class ModerationCommands(commands.Cog):
 
     _reason = 'No reason provided.'
-    _sent_mapping = {True: '', False: ' (I could not DM them)'}
+    _sent_map = {True: '', False: ' (I could not DM them)'}
     _perm_duration = 2 ** 32 - 1
 
     def __init__(self, bot: CustomBot):
@@ -40,7 +41,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Changed {member.mention}\'s nickname.')
+        await self.bot.good_embed(ctx, f'*Changed {member.mention}\'s nickname:* {reason}')
 
     @commands.command(
         name='modnick',
@@ -58,7 +59,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Changed {member.mention}\'s nickname.')
+        await self.bot.good_embed(ctx, f'*Changed {member.mention}\'s nickname:* {reason}')
 
     @commands.command(
         name='note',
@@ -72,7 +73,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Note added for {user.mention}.')
+        await self.bot.good_embed(ctx, f'*Note added for {user.mention}:* {reason}')
 
     @commands.command(
         name='dm',
@@ -92,7 +93,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=True)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Message sent to {user.mention}.')
+        await self.bot.good_embed(ctx, f'*Message sent to {user.mention}:* {reason}')
 
     @commands.command(
         name='warn',
@@ -113,7 +114,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Warned {user.mention}: {reason}{self._sent_mapping[sent]}')
+        await self.bot.good_embed(ctx, f'*Warned {user.mention}:* {reason}{self._sent_map[sent]}')
 
     @commands.command(
         name='kick',
@@ -137,7 +138,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Kicked {member.mention}: {reason}{self._sent_mapping[sent]}')
+        await self.bot.good_embed(ctx, f'*Kicked {member.mention}:* {reason}{self._sent_map[sent]}')
 
     @commands.command(
         name='mute',
@@ -173,17 +174,20 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Muted {user.mention} until <t:{til}:F>: {reason}{self._sent_mapping[sent]}')
+        await self.bot.good_embed(ctx, f'*Muted {user.mention} until <t:{til}:F>:* {reason}{self._sent_map[sent]}')
 
     @commands.command(
         name='ban',
         aliases=['b'],
-        description='Bans a user from the guild, creates a new modlogs entry and DMs them the reason.',
+        description='Bans a user from the guild, creates a new modlog entry and DMs them the reason.',
         extras={'requirement': 2}
     )
     @commands.bot_has_permissions(ban_members=True)
     async def ban(self, ctx: CustomContext, user: User, duration: str, *, reason: str = _reason):
         await self.bot.check_target_member(user)
+
+        if user.id in self.bot.bans:
+            raise Exception(f'{user.mention} is already banned.')
 
         permanent = False
         try:
@@ -196,9 +200,6 @@ class ModerationCommands(commands.Cog):
                 raise error
         seconds = _time_delta.total_seconds()
         til = round(utcnow().timestamp() + seconds)
-
-        if user.id in self.bot.bans:
-            raise Exception(f'{user.mention} is already banned.')
 
         until_str = f' until <t:{til}:F>' if permanent is False else ''
         sent = False
@@ -213,7 +214,53 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
 
-        await self.bot.good_embed(ctx, f'Banned {user.mention}{until_str}: {reason}{self._sent_mapping[sent]}')
+        await self.bot.good_embed(ctx, f'*Banned {user.mention}{until_str}:* {reason}{self._sent_map[sent]}')
+
+    @commands.command(
+        name='channelban',
+        aliases=['cb', 'cban', 'channelblock'],
+        description='Blocks a user from viewing a channel, creates a new modlog entry and DMs them the reason.',
+        extras={'requirement': 3}
+    )
+    @commands.bot_has_permissions(manage_roles=True)
+    async def channel_ban(
+            self, ctx: CustomContext, user: User, channel: GuildChannel, duration: str, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        if channel.overwrites_for(user).view_channel is False:
+            raise Exception(f'{user.mention} is already blocked from viewing that channel.')
+
+        permanent = False
+        try:
+            _time_delta = self.bot.convert_duration(duration)
+        except DurationError as error:
+            if duration.lower() in 'permanent':
+                permanent = True
+                _time_delta = timedelta(seconds=self._perm_duration)
+            else:
+                raise error
+        seconds = _time_delta.total_seconds()
+        til = round(utcnow().timestamp() + seconds)
+
+        until_str = f' until <t:{til}:F>' if permanent is False else ''
+        sent = False
+        try:
+            await self.bot.bad_embed(
+                user, f'**You were blocked from viewing `#{channel}` in {self.bot.guild}{until_str} for:** {reason}')
+            sent = True
+        except HTTPException:
+            pass
+
+        member = await self.bot.user_to_member(user)
+        if isinstance(member, Member):
+            await channel.set_permissions(member, view_channel=False)
+
+        modlog_data = await ctx.to_modlog_data(
+            user.id, channel_id=channel.id, reason=reason, received=sent, duration=seconds)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+
+        await self.bot.good_embed(
+            ctx, f'*Blocked {user.mention} from {channel.mention}{until_str}:* {reason}{self._sent_map[sent]}')
 
 
 async def setup(bot: CustomBot):
