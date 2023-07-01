@@ -324,6 +324,23 @@ class ModerationCommands(commands.Cog):
 
         await self.bot.good_embed(ctx, f'*Unblocked {user.mention} from {channel.mention}:* {reason}')
 
+    @commands.command(
+        name='slowmode',
+        aliases=['sm'],
+        description='Sets a slow-mode timer for a guild channel.',
+        extras={'requirement': 3}
+    )
+    @commands.bot_has_permissions(manage_channels=True)
+    async def slowmode(self, ctx: CustomContext, duration: str, channel: GuildChannel = None):
+        channel = channel or ctx.channel
+
+        _time_delta = self.bot.convert_duration(duration, allow_any_duration=True)
+        if not 0 <= _time_delta.total_seconds() <= 21600:
+            raise DurationError()
+
+        await channel.edit(slowmode_delay=round(_time_delta.total_seconds()))
+        await self.bot.good_embed(ctx, f'*Slowmode set to `{_time_delta}` in {channel.mention}.*')
+
 
 async def setup(bot: CustomBot):
     await bot.add_cog(ModerationCommands(bot))

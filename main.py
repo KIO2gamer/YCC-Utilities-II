@@ -62,12 +62,12 @@ class CustomBot(commands.Bot):
 
         self.perm_duration = 2 ** 32 - 1
 
-    def convert_duration(self, duration: str) -> timedelta:
+    def convert_duration(self, duration: str, allow_any_duration: bool = False) -> timedelta:
         try:
             td = timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
         except (KeyError, ValueError):
             raise DurationError()
-        if td.total_seconds() < 60:
+        if td.total_seconds() < 60 and allow_any_duration is False:
             raise DurationError()
         return td
 
