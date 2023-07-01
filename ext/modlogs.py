@@ -179,7 +179,7 @@ class ModLogCommands(commands.Cog):
         extras={'requirement': 2}
     )
     async def reason(self, ctx: CustomContext, case_id: int, *, reason: str):
-        modlog = await self.bot.mongo_db.update_modlog(case_id=case_id, _deleted=False, reason=reason)
+        modlog = await self.bot.mongo_db.update_modlog(_case_id=case_id, _deleted=False, reason=reason)
         await self.bot.good_embed(ctx, f'**Reason updated for case {modlog.id}:** {reason}')
 
     @commands.command(
@@ -203,13 +203,13 @@ class ModLogCommands(commands.Cog):
         if not 60 <= seconds <= 2419200:
             try:
                 modlog = await self.bot.mongo_db.update_modlog(
-                    case_id=case_id, _type='ban', _active=True, _deleted=False, duration=seconds)
+                    _case_id=case_id, _type='ban', _active=True, _deleted=False, duration=seconds)
             except ModLogNotFound:
                 modlog = await self.bot.mongo_db.update_modlog(
-                    case_id=case_id, _type='channel_ban', _active=True, _deleted=False, duration=seconds)
+                    _case_id=case_id, _type='channel_ban', _active=True, _deleted=False, duration=seconds)
         else:
             modlog = await self.bot.mongo_db.update_modlog(
-                case_id=case_id, _active=True, _deleted=False, duration=seconds)
+                _case_id=case_id, _active=True, _deleted=False, duration=seconds)
 
         if modlog.type == 'mute':
             try:
@@ -232,7 +232,7 @@ class ModLogCommands(commands.Cog):
     async def delcase(self, ctx: CustomContext, case_id: int):
         try:
             deleted_modlog = await self.bot.mongo_db.update_modlog(
-                case_id=case_id, _deleted=False, _active=False, deleted=True)
+                _case_id=case_id, _deleted=False, _active=False, deleted=True)
         except ModLogNotFound:
             raise Exception(f'Modlog not found or could not be deleted as it is ongoing.')
         await self.bot.good_embed(ctx, f'**Case {deleted_modlog.id} deleted.**')
@@ -244,7 +244,7 @@ class ModLogCommands(commands.Cog):
         extras={'requirement': 6}
     )
     async def restorecase(self, ctx: CustomContext, case_id: int):
-        restored_modlog = await self.bot.mongo_db.update_modlog(case_id=case_id, _deleted=True, deleted=False)
+        restored_modlog = await self.bot.mongo_db.update_modlog(_case_id=case_id, _deleted=True, deleted=False)
         await self.bot.good_embed(ctx, f'**Case {restored_modlog.id} restored.**')
 
     @commands.command(

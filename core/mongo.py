@@ -108,28 +108,21 @@ class MongoDBClient:
 
         return modlogs
 
-    async def update_modlog(
-            self,
-            case_id: int = None,
-            _type: str = None,
-            _active: bool = None,
-            _deleted: bool = None,
-            **kwargs
-    ) -> ModLogEntry:
-        # Certain operations should only be performed on certain modlogs
-        # E.g. only non-deleted, non-active modlogs may be deleted
+    async def update_modlog(self, **kwargs) -> ModLogEntry:
+        # Kwargs with leading underscores are our search parameters
+        # Kwargs without leading underscore are our values to update
         search_dict = {}
-        if isinstance(case_id, int):
-            search_dict['case_id'] = case_id
-        if isinstance(_type, str):
-            search_dict['type'] = _type
-        if isinstance(_active, bool):
-            search_dict['active'] = _active
-        if isinstance(_deleted, bool):
-            search_dict['deleted'] = _deleted
+        update_dict = {}
+
+        for kwarg in kwargs:
+            if kwarg.startswith('_'):
+                search_dict[kwarg[1:]] = kwargs[kwarg]
+            else:
+                update_dict[kwarg] = kwargs[kwarg]
+
         data = await self.modlogs.find_one_and_update(
             search_dict,
-            {'$set': kwargs},
+            {'$set': update_dict},
             return_document=ReturnDocument.AFTER,
             session=self._session
         )
