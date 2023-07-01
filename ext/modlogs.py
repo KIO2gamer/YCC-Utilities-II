@@ -2,7 +2,8 @@ from datetime import timedelta
 
 from discord.ext import commands
 from discord import (
-    User
+    User,
+    HTTPException
 )
 
 from main import CustomBot
@@ -76,6 +77,36 @@ class ModLogCommands(commands.Cog):
             fields.append(EmbedField(name=_id, text=text))
 
         return fields
+
+    @commands.command(
+        name='mylogs',
+        aliases=['ml'],
+        description='Allows members to view their own modlogs history by sending a DM to the command author.',
+        extras={'requirement': 0}
+    )
+    @commands.cooldown(1, 15)
+    async def mylogs(self, ctx: CustomContext):
+        try:
+            modlogs = await self.bot.mongo_db.search_modlog(user_id=ctx.author.id, deleted=False)
+            modlogs = [modlog for modlog in modlogs if modlog.type != 'note']
+            modlogs.reverse()
+        except ModLogNotFound:
+            modlogs = []
+
+        fields = self._modlogs_to_fields(modlogs, reason=True)
+        embeds = self.bot.fields_to_embeds(
+            fields,
+            title=f'Your Modlogs - {self.bot.guild}',
+            description='`No modlogs to be displayed.`' if not modlogs else None
+        )
+
+        try:
+            message = await ctx.author.send(embed=embeds[0])
+        except HTTPException:
+            raise Exception('Please enable your DMs.')
+
+        await message.edit(view=Paginator(ctx.author, message, embeds))
+        await self.bot.good_embed(ctx, 'Done, check your DMs.')
 
     @commands.command(
         name='modlogs',
