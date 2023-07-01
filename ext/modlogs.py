@@ -66,7 +66,10 @@ class ModLogCommands(commands.Cog):
             _channel = f'**Channel:** <#{modlog.channel_id}>\n' if modlog.channel_id else ''
             _type = f'**Type:** {self._type_map.get(modlog.type, modlog.type.capitalize())}\n'
             _reason = f'**Reason:** {modlog.reason} - <t:{modlog.created}:F>\n' if kwargs.get('reason') is True else ''
-            _duration = f'**Duration:** `{timedelta(seconds=modlog.duration)}`\n' if modlog.duration else ''
+            _duration = \
+                f'**Duration:** ' \
+                f'`{timedelta(seconds=modlog.duration) if modlog.duration < self.bot.perm_duration else "permanent"}' \
+                f'`\n' if modlog.duration else ''
             _until = f'**Expires:** <t:{modlog.until}:F>' if kwargs.get('until') is True else ''
             _received = f'**Received:** `{modlog.received}`\n' if kwargs.get('received') is True else ''
             _ongoing = f'**Ongoing:** `{modlog.active}`\n' if kwargs.get('ongoing') is True else ''
@@ -188,7 +191,7 @@ class ModLogCommands(commands.Cog):
         except DurationError as error:
             if duration.lower() in 'permanent':
                 permanent = True
-                _time_delta = timedelta(seconds=self.bot._perm_duration)
+                _time_delta = timedelta(seconds=self.bot.perm_duration)
             else:
                 raise error
         seconds = _time_delta.total_seconds()

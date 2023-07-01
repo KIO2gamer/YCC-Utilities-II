@@ -194,7 +194,7 @@ class ModerationCommands(commands.Cog):
         except DurationError as error:
             if duration.lower() in 'permanent':
                 permanent = True
-                _time_delta = timedelta(seconds=self.bot._perm_duration)
+                _time_delta = timedelta(seconds=self.bot.perm_duration)
             else:
                 raise error
         seconds = _time_delta.total_seconds()
@@ -235,7 +235,7 @@ class ModerationCommands(commands.Cog):
         except DurationError as error:
             if duration.lower() in 'permanent':
                 permanent = True
-                _time_delta = timedelta(seconds=self.bot._perm_duration)
+                _time_delta = timedelta(seconds=self.bot.perm_duration)
             else:
                 raise error
         seconds = _time_delta.total_seconds()
