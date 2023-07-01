@@ -97,6 +97,7 @@ class MongoDBClient:
 
     async def insert_modlog(self, **kwargs) -> ModLogEntry:
         await self.modlogs.insert_one(kwargs, session=self._session)
+        logging.info(f'New modlog entry created - Case ID: {kwargs.get("case_id")}')
         return ModLogEntry(self.bot, **kwargs)
 
     async def search_modlog(self, **kwargs) -> list[ModLogEntry]:
@@ -129,5 +130,7 @@ class MongoDBClient:
 
         if data is None:
             raise ModLogNotFound()
+
+        logging.info(f'Updated existing modlog entry - Case ID: {data.get("case_id")} - Updated: {update_dict}')
 
         return ModLogEntry(self.bot, **data)

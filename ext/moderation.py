@@ -1,6 +1,7 @@
 from unicodedata import normalize
 from datetime import timedelta
 from random import randint
+from typing import Callable
 
 from discord.ext import commands
 from discord.abc import GuildChannel
@@ -12,8 +13,8 @@ from discord import (
 )
 
 from main import CustomBot
-from core.errors import DurationError
 from core.context import CustomContext
+from core.errors import DurationError, ModLogNotFound
 
 
 class ModerationCommands(commands.Cog):
@@ -23,6 +24,22 @@ class ModerationCommands(commands.Cog):
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
+
+    @staticmethod
+    async def _try_send(func: Callable, *args) -> bool:
+        try:
+            await func(*args)
+            return True
+        except HTTPException:
+            return False
+
+    async def _end_modlogs(self, _user_id: int, _type: str, _channel_id: int) -> None:
+        while True:
+            try:
+                await self.bot.mongo_db.update_modlog(
+                    _user_id=_user_id, _type=_type, _channel_id=_channel_id, _active=True, active=False)
+            except ModLogNotFound:
+                break
 
     @commands.command(
         name='decancer',
@@ -86,8 +103,7 @@ class ModerationCommands(commands.Cog):
         try:
             await self.bot.neutral_embed(user, f'**You received a message from {self.bot.guild}:** {reason}')
         except HTTPException:
-            await self.bot.bad_embed(ctx, f'❌ Unable to message {user.mention}.')
-            return
+            raise Exception(f'Unable to message {user.mention}.')
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=True)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
@@ -103,12 +119,8 @@ class ModerationCommands(commands.Cog):
     async def warn(self, ctx: CustomContext, user: User, *, reason: str = _reason):
         await self.bot.check_target_member(user)
 
-        sent = False
-        try:
-            await self.bot.bad_embed(user, f'**You received a warning in {self.bot.guild} for:** {reason}')
-            sent = True
-        except HTTPException:
-            pass
+        message = f'**You received a warning in {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, user, message)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
@@ -125,12 +137,8 @@ class ModerationCommands(commands.Cog):
     async def kick(self, ctx: CustomContext, member: Member, *, reason: str = _reason):
         await self.bot.check_target_member(member)
 
-        sent = False
-        try:
-            await self.bot.bad_embed(member, f'**You were kicked from {self.bot.guild} for:** {reason}')
-            sent = True
-        except HTTPException:
-            pass
+        message = f'**You were kicked from {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, member, message)
 
         await member.kick()
 
@@ -163,12 +171,8 @@ class ModerationCommands(commands.Cog):
             else:
                 await member.timeout(_time_delta)
 
-        sent = False
-        try:
-            await self.bot.bad_embed(user, f'**You were muted in {self.bot.guild} until <t:{til}:F> for:** {reason}')
-            sent = True
-        except HTTPException:
-            pass
+        message = f'**You were muted in {self.bot.guild} until <t:{til}:F> for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, user, message)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
@@ -201,12 +205,8 @@ class ModerationCommands(commands.Cog):
         til = round(utcnow().timestamp() + seconds)
 
         until_str = f' until <t:{til}:F>' if permanent is False else ''
-        sent = False
-        try:
-            await self.bot.bad_embed(user, f'**You were banned from {self.bot.guild}{until_str} for:** {reason}')
-            sent = True
-        except HTTPException:
-            pass
+        message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, user, message)
 
         await self.bot.guild.ban(user)
 
@@ -227,7 +227,7 @@ class ModerationCommands(commands.Cog):
         await self.bot.check_target_member(user)
 
         if channel.overwrites_for(user).view_channel is False:
-            raise Exception(f'{user.mention} is already blocked from viewing that channel.')
+            raise Exception(f'{user.mention} is already blocked from viewing {channel.mention}.')
 
         permanent = False
         try:
@@ -242,13 +242,8 @@ class ModerationCommands(commands.Cog):
         til = round(utcnow().timestamp() + seconds)
 
         until_str = f' until <t:{til}:F>' if permanent is False else ''
-        sent = False
-        try:
-            await self.bot.bad_embed(
-                user, f'**You were blocked from viewing `#{channel}` in {self.bot.guild}{until_str} for:** {reason}')
-            sent = True
-        except HTTPException:
-            pass
+        message = f'**You were blocked from viewing `#{channel}` in {self.bot.guild}{until_str} for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, user, message)
 
         member = await self.bot.user_to_member(user)
         if isinstance(member, Member):
@@ -260,6 +255,74 @@ class ModerationCommands(commands.Cog):
 
         await self.bot.good_embed(
             ctx, f'*Blocked {user.mention} from {channel.mention}{until_str}:* {reason}{self._sent_map[sent]}')
+
+    @commands.command(
+        name='unmute',
+        aliases=['um'],
+        description='Unmutes a timed-out member, creates a new modlogs entry and DMs them the reason.',
+        extras={'requirement': 4}
+    )
+    @commands.bot_has_permissions(moderate_members=True)
+    async def unmute(self, ctx: CustomContext, member: Member, *, reason: str = _reason):
+        if member.is_timed_out() is False:
+            raise Exception(f'{member.mention} is not muted.')
+
+        message = f'**You were unmuted in {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.neutral_embed, member, message)
+
+        await member.timeout(None)
+
+        modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self._end_modlogs(member.id, 'mute', 0)
+
+        await self.bot.good_embed(ctx, f'*Unmuted {member.mention}:* {reason}{self._sent_map[sent]}')
+
+    @commands.command(
+        name='unban',
+        aliases=['ub'],
+        description='Unbans a user from the guild, creates a new modlogs entry and DMs them the reason.',
+        extras={'requirement': 4}
+    )
+    @commands.bot_has_permissions(ban_members=True)
+    async def unban(self, ctx: CustomContext, user: User, *, reason: str = _reason):
+        if user.id not in self.bot.bans:
+            raise Exception(f'{user.mention} is not banned.')
+
+        message = f'**You were unbanned from {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.neutral_embed, user, message)
+
+        await self.bot.guild.unban(user)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self._end_modlogs(user.id, 'ban', 0)
+
+        await self.bot.good_embed(ctx, f'*Unbanned {user.mention}:* {reason}{self._sent_map[sent]}')
+
+    @commands.command(
+        name='channelunban',
+        aliases=['cub', 'cunban', 'channelub'],
+        description='Unblocks a user from the channel, creates a new modlogs entry and DMs them the reason.',
+        extras={'requirement': 4}
+    )
+    @commands.bot_has_permissions(manage_roles=True)
+    async def channel_unban(self, ctx: CustomContext, user: User, channel: GuildChannel, *, reason: str = _reason):
+        if channel.overwrites_for(user).view_channel is not False:
+            raise Exception(f'{user.mention} is not blocked from viewing {channel.mention}.')
+
+        message = f'**You were unblocked from `#{channel}` in {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.neutral_embed, user, message)
+
+        member = await self.bot.user_to_member(user)
+        if isinstance(member, Member):
+            await channel.set_permissions(member, view_channel=None)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
+        await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self._end_modlogs(user.id, 'channel_ban', channel.id)
+
+        await self.bot.good_embed(ctx, f'*Unblocked {user.mention} from {channel.mention}:* {reason}')
 
 
 async def setup(bot: CustomBot):
