@@ -116,7 +116,8 @@ class MongoDBClient:
             _deleted: bool = None,
             **kwargs
     ) -> ModLogEntry:
-        # Certain operations should only be performed on certain modlogs (e.g. non-deleted modlogs)
+        # Certain operations should only be performed on certain modlogs
+        # E.g. only non-deleted, non-active modlogs may be deleted
         search_dict = {'case_id': case_id}
         if isinstance(_type, str):
             search_dict['type'] = _type

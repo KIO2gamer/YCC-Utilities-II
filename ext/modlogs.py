@@ -206,6 +206,49 @@ class ModLogCommands(commands.Cog):
         duration_str = '`permanent`' if permanent is True else f'`{_time_delta}` (expires <t:{modlog.until}:R>)'
         await self.bot.good_embed(ctx, f'**Updated duration for case {case_id} to {duration_str}.**')
 
+    @commands.command(
+        name='delcase',
+        aliases=['rmcase'],
+        description='Deletes a modlog, making it invisible on most commands. Ongoing cases cannot be deleted.',
+        extras={'requirement': 6}
+    )
+    async def delcase(self, ctx: CustomContext, case_id: int):
+        try:
+            deleted_modlog = await self.bot.mongo_db.update_modlog(case_id, _deleted=False, _active=False, deleted=True)
+        except ModLogNotFound:
+            raise Exception(f'Modlog not found or could not be deleted as it is ongoing.')
+        await self.bot.good_embed(ctx, f'**Case {deleted_modlog.id} deleted.**')
+
+    @commands.command(
+        name='restorecase',
+        aliases=['rescase', 'rc'],
+        description='Restores a modlog. This will reverse the effects of it being deleted.',
+        extras={'requirement': 6}
+    )
+    async def restorecase(self, ctx: CustomContext, case_id: int):
+        restored_modlog = await self.bot.mongo_db.update_modlog(case_id, _deleted=True, deleted=False)
+        await self.bot.good_embed(ctx, f'**Case {restored_modlog.id} restored.**')
+
+    @commands.command(
+        name='deletedlogs',
+        aliases=['dellogs'],
+        description='View the deleted modlogs of a specific user. Flags can be used to filter specific actions.',
+        extras={'requirement': 6}
+    )
+    async def deletedlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):
+        user = user or ctx.author
+        modlogs = await self.bot.mongo_db.search_modlog(user_id=user.id, deleted=True)
+        filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
+        filtered_modlogs.reverse()
+
+        fields = self._modlogs_to_fields(filtered_modlogs, mod=True, reason=True, received=True)
+        embeds = self.bot.fields_to_embeds(fields, title=f'Deleted Modlogs for {user.name}')
+        for embed in embeds:
+            embed.reverse_fields()
+
+        message = await ctx.send(embed=embeds[0])
+        await message.edit(view=Paginator(ctx.author, message, embeds))
+
 
 async def setup(bot: CustomBot):
     await bot.add_cog(ModLogCommands(bot))
