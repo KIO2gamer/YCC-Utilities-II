@@ -61,7 +61,7 @@ class ModLogCommands(commands.Cog):
         fields = []
 
         for modlog in modlogs:
-            _id = f'Case {modlog.id}'
+            _id = f'Case {modlog.id} {"(Ongoing)" if modlog.active is True else ""}'
             _mod = f'**Moderator:** <@{modlog.mod_id}>\n' if kwargs.get('mod') is True else ''
             _user = f'**User:** <@{modlog.user_id}>\n' if kwargs.get('user') is True else ''
             _channel = f'**Channel:** <#{modlog.channel_id}>\n' if modlog.channel_id else ''
@@ -73,10 +73,9 @@ class ModLogCommands(commands.Cog):
                 f'`\n' if modlog.duration else ''
             _until = f'**Expires:** <t:{modlog.until}:F>' if kwargs.get('until') is True else ''
             _received = f'**Received:** `{modlog.received}`\n' if kwargs.get('received') is True else ''
-            _ongoing = f'**Ongoing:** `{modlog.active}`\n' if kwargs.get('ongoing') is True else ''
             _deleted = f'**Deleted:** `{modlog.deleted}`\n' if kwargs.get('deleted') is True else ''
 
-            text = _user + _type + _channel + _mod + _reason + _duration + _until + _received + _ongoing + _deleted
+            text = _user + _type + _channel + _mod + _reason + _duration + _until + _received + _deleted
 
             fields.append(EmbedField(name=_id, text=text))
 
@@ -161,7 +160,7 @@ class ModLogCommands(commands.Cog):
         modlogs = await self.bot.mongo_db.search_modlog(case_id=case_id, deleted=False)
         modlogs.reverse()
 
-        fields = self._modlogs_to_fields(modlogs, user=True, mod=True, reason=True, ongoing=True)
+        fields = self._modlogs_to_fields(modlogs, user=True, mod=True, reason=True)
         embeds = self.bot.fields_to_embeds(fields)
         for embed in embeds:
             embed.reverse_fields()
