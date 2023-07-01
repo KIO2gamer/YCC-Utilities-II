@@ -91,6 +91,14 @@ class MongoDBClient:
 
         return data
 
+    async def update_metadata(self, **kwargs) -> dict:
+        return await self.metadata.find_one_and_update(
+            {},
+            {'$set': kwargs},
+            return_document=ReturnDocument.AFTER,
+            session=self._session
+        )
+
     async def generate_id(self) -> int:
         return 1 \
             + await self.modlogs.count_documents({}, session=self._session)

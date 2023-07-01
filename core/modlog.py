@@ -8,8 +8,6 @@ class ModLogEntry:
     def __init__(self, bot, **kwargs):
         self._bot = ref(bot)
 
-        self.raw = kwargs
-
         self.id: int = kwargs.get('case_id', 0)
         self.mod_id: int = kwargs.get('mod_id', 0)
         self.user_id: int = kwargs.get('user_id', 0)
