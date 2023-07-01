@@ -1,7 +1,7 @@
 from typing import Union
 
-from discord import ui
 from discord import (
+    ui,
     User,
     Member,
     Message,

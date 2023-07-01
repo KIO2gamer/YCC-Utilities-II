@@ -3,6 +3,7 @@ import asyncio
 import logging
 from datetime import timedelta
 from typing import Union, Optional
+from traceback import format_exception as format_error
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,6 +31,7 @@ try:
     from core.errors import DurationError
     from core.embed import EmbedField, CustomEmbed
     from core.context import CustomContext, enforce_clearance
+    from components.traceback import TracebackView
 
 except ModuleNotFoundError as unknown_import:
     logging.fatal(f'Missing required dependencies - {unknown_import}.')
@@ -172,7 +174,9 @@ class CustomBot(commands.Bot):
         if reset_cooldown is True:
             ctx.command.reset_cooldown(ctx)
 
-        await self.bad_embed(ctx, f'❌ {message}')
+        message = await self.bad_embed(ctx, f'❌ {message}')
+        traceback = f'**Full Traceback:**\n```py\n{"".join(format_error(type(error), error, error.__traceback__))}\n```'
+        await message.edit(view=TracebackView(self, message, traceback))
 
     async def on_message(self, message: Message) -> None:
         if message.guild is None or message.guild.id != self.guild_id:
