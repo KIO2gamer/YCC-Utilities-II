@@ -42,15 +42,19 @@ class ModLogCommands(commands.Cog):
     def __init__(self, bot: CustomBot):
         self.bot = bot
 
-    def _filter_modlogs(self, modlogs: list[ModLogEntry], flags: list[str] = None) -> list[ModLogEntry]:
-        flags = flags or []
-        filtered_modlogs = []
+    def _filter_modlogs(self, modlogs: list[ModLogEntry], flags: list[str]) -> list[ModLogEntry]:
+        flags = [] if flags == [''] else flags
 
-        for modlog in modlogs:
-            for flag in flags:
-                if flag not in self._flag_map or self._flag_map[flag] == modlog.type:
-                    filtered_modlogs.append(modlog)
-                    break
+        if flags:
+            filtered_modlogs = []
+            for modlog in modlogs:
+                for flag in flags:
+                    _type = self._flag_map.get(flag)
+                    if _type and _type == modlog.type:
+                        filtered_modlogs.append(modlog)
+                        break
+        else:
+            filtered_modlogs = modlogs
 
         if not filtered_modlogs:
             raise ModLogNotFound()
@@ -120,7 +124,7 @@ class ModLogCommands(commands.Cog):
     async def modlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):
         user = user or ctx.author
         modlogs = await self.bot.mongo_db.search_modlog(user_id=user.id, deleted=False)
-        filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
+        filtered_modlogs = self._filter_modlogs(modlogs, flags.split(' '))
         filtered_modlogs.reverse()
 
         fields = self._modlogs_to_fields(filtered_modlogs, mod=True, reason=True, received=True)
@@ -139,7 +143,7 @@ class ModLogCommands(commands.Cog):
     )
     async def moderations(self, ctx: CustomContext, *, flags: str = ''):
         modlogs = await self.bot.mongo_db.search_modlog(active=True, deleted=False)
-        filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
+        filtered_modlogs = self._filter_modlogs(modlogs, flags.split(' '))
         filtered_modlogs.reverse()
 
         fields = self._modlogs_to_fields(filtered_modlogs, user=True, until=True)
@@ -252,7 +256,7 @@ class ModLogCommands(commands.Cog):
     async def deletedlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):
         user = user or ctx.author
         modlogs = await self.bot.mongo_db.search_modlog(user_id=user.id, deleted=True)
-        filtered_modlogs = self._filter_modlogs(modlogs, flags=flags.split(' '))
+        filtered_modlogs = self._filter_modlogs(modlogs, flags.split(' '))
         filtered_modlogs.reverse()
 
         fields = self._modlogs_to_fields(filtered_modlogs, mod=True, reason=True, received=True)
