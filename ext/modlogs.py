@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from discord.utils import utcnow
 from discord.ext import commands
 from discord import (
     User,
@@ -205,6 +206,15 @@ class ModLogCommands(commands.Cog):
                     case_id, _type='channel_ban', _active=True, _deleted=False, duration=seconds)
         else:
             modlog = await self.bot.mongo_db.update_modlog(case_id, _active=True, _deleted=False, duration=seconds)
+
+        if modlog.type == 'mute':
+            try:
+                member = await self.bot.guild.fetch_member(modlog.user_id)
+            except HTTPException:
+                pass
+            else:
+                new_muted_duration = timedelta(seconds=modlog.created + seconds - utcnow().timestamp())
+                await member.timeout(new_muted_duration)
 
         duration_str = '`permanent`' if permanent is True else f'`{_time_delta}` (expires <t:{modlog.until}:R>)'
         await self.bot.good_embed(ctx, f'**Updated duration for case {case_id} to {duration_str}.**')
