@@ -110,7 +110,7 @@ class MongoDBClient:
 
     async def update_modlog(
             self,
-            case_id: int,
+            case_id: int = None,
             _type: str = None,
             _active: bool = None,
             _deleted: bool = None,
@@ -118,7 +118,9 @@ class MongoDBClient:
     ) -> ModLogEntry:
         # Certain operations should only be performed on certain modlogs
         # E.g. only non-deleted, non-active modlogs may be deleted
-        search_dict = {'case_id': case_id}
+        search_dict = {}
+        if isinstance(case_id, int):
+            search_dict['case_id'] = case_id
         if isinstance(_type, str):
             search_dict['type'] = _type
         if isinstance(_active, bool):
