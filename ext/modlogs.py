@@ -118,7 +118,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='modlogs',
         aliases=['logs', 'history'],
-        description='View the modlogs history of a specific user. Flags can be used to filter specific actions.',
+        description='Shows the modlogs history of a specific user. Flags can be used to filter specific actions.',
         extras={'requirement': 1}
     )
     async def modlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):
@@ -138,7 +138,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='moderations',
         aliases=['activelogs', 'mds'],
-        description='View a list of ongoing moderations.  Flags can be used to filter specific actions.',
+        description='Shows a list of ongoing moderations.  Flags can be used to filter specific actions.',
         extras={'requirement': 1}
     )
     async def moderations(self, ctx: CustomContext, *, flags: str = ''):
@@ -157,7 +157,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='case',
         aliases=['findcase'],
-        description='Find a specific modlog entry by case ID.',
+        description='Finds a specific modlog entry by case ID.',
         extras={'requirement': 1}
     )
     async def case(self, ctx: CustomContext, case_id: int):
@@ -175,7 +175,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='reason',
         aliases=['r'],
-        description='Edit the reason of an existing modlog.',
+        description='Edits the reason of an existing modlog.',
         extras={'requirement': 2}
     )
     async def reason(self, ctx: CustomContext, case_id: int, *, reason: str):
@@ -185,7 +185,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='duration',
         aliases=['dur'],
-        description='Edit the duration of an active modlog.',
+        description='Edits the duration of an active modlog.',
         extras={'requirement': 3}
     )
     async def duration(self, ctx: CustomContext, case_id: int, duration: str):
@@ -250,7 +250,7 @@ class ModLogsCommands(commands.Cog):
     @commands.command(
         name='deletedlogs',
         aliases=['dellogs'],
-        description='View the deleted modlogs of a specific user. Flags can be used to filter specific actions.',
+        description='Shows the deleted modlogs of a specific user. Flags can be used to filter specific actions.',
         extras={'requirement': 6}
     )
     async def deletedlogs(self, ctx: CustomContext, user: User = None, *, flags: str = ''):

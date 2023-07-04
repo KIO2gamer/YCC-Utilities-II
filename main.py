@@ -183,7 +183,7 @@ class CustomBot(commands.Bot):
         await message.edit(view=TracebackView(self, message, traceback))
 
     async def on_message(self, message: Message) -> None:
-        if message.guild is None or message.guild.id != self.guild_id:
+        if not message.guild or message.guild.id != self.guild_id or message.author.bot:
             return
 
         ctx = await self.get_context(message, cls=CustomContext)

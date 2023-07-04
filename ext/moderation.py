@@ -344,8 +344,8 @@ class ModerationCommands(commands.Cog):
 
     @commands.command(
         name='purge',
-        aliases=['bulkdelete'],
-        description='Bulk-delete up to 100 messages, either indiscriminantly or target those sent by a specific user.',
+        aliases=[],
+        description='Bulk-deletes up to 100 messages, either indiscriminantly or only those sent by a specific user.',
         extras={'requirement': 3}
     )
     @commands.bot_has_permissions(manage_messages=True)
