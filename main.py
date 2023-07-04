@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from time import time
 from datetime import timedelta
 from typing import Union, Optional
 from traceback import format_exception as format_error
@@ -44,6 +45,8 @@ class CustomBot(commands.Bot):
 
     def __init__(self):
 
+        self.start_time = time()
+
         intents = Intents.all()
         intents.typing = intents.presences = False
 
@@ -55,6 +58,7 @@ class CustomBot(commands.Bot):
             case_insensitive=True,
             max_messages=10000
         )
+
         self.guild_id = config.GUILD_ID
         self.mongo_db = self.guild = None
         self.metadata = {}

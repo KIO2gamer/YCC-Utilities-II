@@ -15,7 +15,7 @@ from core.errors import ModLogNotFound, DurationError
 from components.paginator import Paginator
 
 
-class ModLogCommands(commands.Cog):
+class ModLogsCommands(commands.Cog):
 
     _flag_map = {
         '-dc': 'decancer',
@@ -269,4 +269,4 @@ class ModLogCommands(commands.Cog):
 
 
 async def setup(bot: CustomBot):
-    await bot.add_cog(ModLogCommands(bot))
+    await bot.add_cog(ModLogsCommands(bot))

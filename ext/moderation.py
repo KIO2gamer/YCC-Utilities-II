@@ -348,6 +348,7 @@ class ModerationCommands(commands.Cog):
         description='Bulk-delete up to 100 messages, either indiscriminantly or target those sent by a specific user.',
         extras={'requirement': 3}
     )
+    @commands.bot_has_permissions(manage_messages=True)
     async def purge(self, ctx: CustomContext, count: int, user: User = None):
         if not 0 < count < 101:
             raise Exception('Specify a message count between 1 and 100.')
