@@ -8,6 +8,7 @@ from discord.abc import GuildChannel
 from discord.utils import utcnow
 from discord import (
     HTTPException,
+    Message,
     Member,
     User
 )
@@ -208,7 +209,7 @@ class ModerationCommands(commands.Cog):
         message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
         sent = await self._try_send(self.bot.bad_embed, user, message)
 
-        await self.bot.guild.ban(user)
+        await self.bot.guild.ban(user, delete_message_days=0)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
@@ -340,6 +341,36 @@ class ModerationCommands(commands.Cog):
 
         await channel.edit(slowmode_delay=round(_time_delta.total_seconds()))
         await self.bot.good_embed(ctx, f'*Slowmode set to `{_time_delta}` in {channel.mention}.*')
+
+    @commands.command(
+        name='purge',
+        aliases=['bulkdelete'],
+        description='Bulk-delete up to 100 messages, either indiscriminantly or target those sent by a specific user.',
+        extras={'requirement': 3}
+    )
+    async def purge(self, ctx: CustomContext, count: int, user: User = None):
+        if not 0 < count < 101:
+            raise Exception('Specify a message count between 1 and 100.')
+
+        def message_check(_message: Message) -> bool:
+            return not user or _message.author == user
+
+        message_count = 0
+        purge_limit = 0
+
+        async with ctx.typing():
+            await ctx.message.delete()
+
+            async for message in ctx.channel.history(limit=1500):
+                purge_limit += 1
+                if not user or message.author == user:
+                    message_count += 1
+                if message_count == count:
+                    break
+
+            purged = await ctx.channel.purge(limit=purge_limit, check=message_check)
+
+        await ctx.send(f'*Purged {len(purged)} messages.*', delete_after=5)
 
 
 async def setup(bot: CustomBot):

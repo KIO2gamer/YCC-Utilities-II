@@ -53,7 +53,7 @@ class CustomBot(commands.Bot):
             owner_ids=config.OWNERS,
             help_command=None,
             case_insensitive=True,
-            max_messages=5000
+            max_messages=10000
         )
         self.guild_id = config.GUILD_ID
         self.mongo_db = self.guild = None
