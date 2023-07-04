@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 try:
     from discord.ui import View
     from discord.abc import Messageable
-    from discord.utils import MISSING
+    from discord.utils import MISSING, utcnow
     from discord.ext import commands, tasks
     from discord import (
         __version__ as __discord__,
@@ -191,8 +191,34 @@ class CustomBot(commands.Bot):
         ctx = await self.get_context(message, cls=CustomContext)
         await self.invoke(ctx)
 
+    async def on_member_join(self, member: Member) -> None:
+        if member.guild != self.guild:
+            return
+
+        try:
+            member_modlogs = await self.mongo_db.search_modlog(user_id=member.id, active=True, deleted=False)
+        except ModLogNotFound:
+            return
+
+        for modlog in member_modlogs:
+            if modlog.expired is True:
+                continue
+
+            try:
+
+                if modlog.type == 'mute':
+                    duration = timedelta(seconds=modlog.until - utcnow().timestamp())
+                    await member.timeout(duration)
+
+                elif modlog.type == 'channel_ban':
+                    channel = self.get_channel(modlog.channel_id) or await self.fetch_channel(modlog.channel_id)
+                    await channel.set_permissions(member, view_channel=False)
+
+            except HTTPException as error:
+                logging.error(f'Failed to enforce case {modlog.id} on member re-join - {error}')
+
     @tasks.loop(minutes=1)
-    async def modlogs_tasks(self):
+    async def modlogs_tasks(self) -> None:
         await self.wait_until_ready()
 
         self.guild = self.get_guild(self.guild_id) or self.guild
@@ -236,7 +262,7 @@ class CustomBot(commands.Bot):
             raise SystemExit()
 
         logging.info('Fetching guild bans, this may take a while...')
-        'self.bans = [entry.user.id async for entry in self.guild.bans(limit=None)]'
+        self.bans = [entry.user.id async for entry in self.guild.bans(limit=None)]
 
         self.metadata = await self.mongo_db.get_metadata()
 
