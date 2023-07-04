@@ -10,9 +10,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 try:
     from discord.ui import View
-    from discord.ext import commands
     from discord.abc import Messageable
     from discord.utils import MISSING
+    from discord.ext import commands, tasks
     from discord import (
         __version__ as __discord__,
         Intents,
@@ -28,9 +28,10 @@ try:
 
     # Local imports
     from resources import config
+    from core.modlog import ModLogEntry
     from core.mongo import MongoDBClient
-    from core.errors import DurationError
     from core.embed import EmbedField, CustomEmbed
+    from core.errors import DurationError, ModLogNotFound
     from core.context import CustomContext, enforce_clearance
     from components.traceback import TracebackView
 
@@ -117,11 +118,12 @@ class CustomBot(commands.Bot):
     async def bad_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
         return await self.basic_embed(destination, message, Color.red(), view=view)
 
-    async def user_to_member(self, user: User) -> Optional[Member]:
+    async def user_to_member(self, user: User, raise_exception: bool = False) -> Optional[Member]:
         try:
             return self.guild.get_member(user.id) or await self.guild.fetch_member(user.id)
-        except HTTPException:
-            return
+        except HTTPException as error:
+            if raise_exception is True:
+                raise error
 
     async def member_clearance(self, member: Union[User, Member]) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
@@ -189,6 +191,37 @@ class CustomBot(commands.Bot):
         ctx = await self.get_context(message, cls=CustomContext)
         await self.invoke(ctx)
 
+    @tasks.loop(minutes=1)
+    async def modlogs_tasks(self):
+        await self.wait_until_ready()
+
+        self.guild = self.get_guild(self.guild_id) or self.guild
+
+        try:
+            expired_logs = await self.mongo_db.search_modlog(active=True, deleted=False)
+        except ModLogNotFound:
+            return
+
+        for modlog in expired_logs:
+            if modlog.expired is False:
+                continue
+
+            try:
+                user = self.get_user(modlog.user_id) or await self.fetch_user(modlog.user_id)
+
+                if modlog.type == 'ban':
+                    await self.guild.unban(user)
+
+                elif modlog.type == 'channel_ban':
+                    channel = self.get_channel(modlog.channel_id) or await self.fetch_channel(modlog.channel_id)
+                    member = await self.user_to_member(user, raise_exception=True)
+                    await channel.set_permissions(member, view_channel=None)
+
+            except Exception as error:
+                logging.error(f'Failed to resolve modlog case {modlog.id} - {error}')
+
+            await self.mongo_db.update_modlog(_case_id=modlog.id, active=False)
+
     async def setup_hook(self) -> None:
         logging.info(f'Logging in as {self.user.name} (ID: {self.user.id})...')
 
@@ -203,9 +236,11 @@ class CustomBot(commands.Bot):
             raise SystemExit()
 
         logging.info('Fetching guild bans, this may take a while...')
-        self.bans = [entry.user.id async for entry in self.guild.bans(limit=None)]
+        'self.bans = [entry.user.id async for entry in self.guild.bans(limit=None)]'
 
         self.metadata = await self.mongo_db.get_metadata()
+
+        self.modlogs_tasks.start()
 
     def run_bot(self) -> None:
 
@@ -225,7 +260,7 @@ class CustomBot(commands.Bot):
                     logging.fatal('Intents are being requested that have not been enabled in the developer portal.')
 
         async def _cleanup():
-            pass
+            self.modlogs_tasks.cancel()
 
         # noinspection PyUnresolvedReferences
         with asyncio.Runner() as runner:
