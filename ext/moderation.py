@@ -362,7 +362,7 @@ class ModerationCommands(commands.Cog):
         async with ctx.typing():
             await ctx.message.delete()
 
-            async for message in ctx.channel.history(limit=1500):
+            async for message in ctx.channel.history(limit=1000):
                 purge_limit += 1
                 if not user or message.author == user:
                     message_count += 1

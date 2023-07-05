@@ -60,9 +60,11 @@ class MongoDBClient:
             default = {
                 'gen_channel': _none,
                 'log_channel': _none,
+                'appeal_channel': _none,
                 'trivia_channel': _none,
                 'suggest_channel': _none,
 
+                'appeal_bl': _list,
                 'trivia_bl': _list,
                 'suggest_bl': _list,
 
@@ -81,8 +83,11 @@ class MongoDBClient:
                 'trivia_role': _none,
                 'active_role': _none,
                 
-                'ignored_roles': _list,
-                'ignored_channels': _list,
+                'event_ignored_roles': _list,
+                'event_ignored_channels': _list,
+
+                'auto_mod_ignored_roles': _list,
+                'auto_mod_ignored_channels': _list,
 
                 'activity': _none
             }
