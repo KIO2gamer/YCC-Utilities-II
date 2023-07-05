@@ -94,15 +94,15 @@ class MongoDBClient:
 
         return MetaData(self.bot, **data)
 
-    async def update_metadata(self, **kwargs) -> MetaData:
+    async def update_metadata(self, **kwargs) -> None:
         data = await self.metadata.find_one_and_update(
             {},
             {'$set': kwargs},
             return_document=ReturnDocument.AFTER,
             session=self._session
         )
-        # Re-assign this value to `CustomBot.metadata` when calling this method.
-        return MetaData(self.bot, **data)
+        # Edit `CustomBot.metadata` in-place rather than returning a new version
+        self.bot.metadata = MetaData(self.bot, **data)
 
     async def generate_id(self) -> int:
         return 1 \
