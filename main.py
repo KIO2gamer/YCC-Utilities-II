@@ -61,13 +61,11 @@ class CustomBot(commands.Bot):
         )
 
         self.guild_id = config.GUILD_ID
-        self.mongo_db = self.guild = None
-        self.metadata = {}
-        self.bans = []
-
-        self.add_check(enforce_clearance, call_once=True)
+        self.guild = self.mongo_db = self.metadata = self.bans = None
 
         self.perm_duration = 2 ** 32 - 1
+
+        self.add_check(enforce_clearance, call_once=True)
 
     def convert_duration(self, duration: str, allow_any_duration: bool = False) -> timedelta:
         try:

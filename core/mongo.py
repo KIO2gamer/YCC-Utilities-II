@@ -15,6 +15,7 @@ from motor.motor_asyncio import (
 
 from core.modlog import ModLogEntry
 from core.errors import ModLogNotFound
+from core.metadata import MetaData
 
 
 class MongoDBClient:
@@ -51,58 +52,57 @@ class MongoDBClient:
         await self._session.end_session()
         return False
 
-    async def get_metadata(self) -> dict:
+    async def get_metadata(self) -> MetaData:
         data = await self.metadata.find_one({}, session=self._session)
 
         if data is None:
-            _none = None
-            _list = []
             default = {
-                'gen_channel': _none,
-                'log_channel': _none,
-                'appeal_channel': _none,
-                'trivia_channel': _none,
-                'suggest_channel': _none,
+                'appeal_channel': None,
+                'trivia_channel': None,
+                'suggest_channel': None,
+                'general_channel': None,
+                'logging_channel': None,
 
-                'appeal_bl': _list,
-                'trivia_bl': _list,
-                'suggest_bl': _list,
+                'admin_role': None,
+                'bot_role': None,
+                'senior_role': None,
+                'hmod_role': None,
+                'smod_role': None,
+                'rmod_role': None,
+                'tmod_role': None,
+                'helper_role': None,
 
-                'domain_bl': _none,
-                'domain_wl': _none,
+                'trivia_role': None,
+                'active_role': None,
 
-                'admin_role': _none,
-                'bot_role': _none,
-                'senior_role': _none,
-                'hmod_role': _none,
-                'smod_role': _none,
-                'rmod_role': _none,
-                'tmod_role': _none,
-                'helper_role': _none,
+                'domain_bl': [],
+                'domain_wl': [],
 
-                'trivia_role': _none,
-                'active_role': _none,
-                
-                'event_ignored_roles': _list,
-                'event_ignored_channels': _list,
+                'appeal_bl': [],
+                'trivia_bl': [],
+                'suggest_bl': [],
 
-                'auto_mod_ignored_roles': _list,
-                'auto_mod_ignored_channels': _list,
+                'event_ignored_roles': [],
+                'event_ignored_channels': [],
+                'auto_mod_ignored_roles': [],
+                'auto_mod_ignored_channels': [],
 
-                'activity': _none
+                'activity': None
             }
             await self.metadata.insert_one(default, session=self._session)
-            return default
+            data = default
 
-        return data
+        return MetaData(self.bot, **data)
 
-    async def update_metadata(self, **kwargs) -> dict:
-        return await self.metadata.find_one_and_update(
+    async def update_metadata(self, **kwargs) -> MetaData:
+        data = await self.metadata.find_one_and_update(
             {},
             {'$set': kwargs},
             return_document=ReturnDocument.AFTER,
             session=self._session
         )
+        # Re-assign this value to `CustomBot.metadata` when calling this method.
+        return MetaData(self.bot, **data)
 
     async def generate_id(self) -> int:
         return 1 \
