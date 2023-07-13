@@ -179,7 +179,11 @@ class CustomBot(commands.Bot):
             ctx.command.reset_cooldown(ctx)
 
         message = await self.bad_embed(ctx, f'❌ {message}')
+
         traceback = f'**Full Traceback:**\n```py\n{"".join(format_error(type(error), error, error.__traceback__))}\n```'
+        if len(traceback) > 2000:
+            traceback = '```py' + traceback[1995:]
+
         await message.edit(view=TracebackView(self, message, traceback))
 
     async def on_message(self, message: Message) -> None:

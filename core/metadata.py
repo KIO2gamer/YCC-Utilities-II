@@ -16,7 +16,7 @@ class MetaData(dict):
 
     @property
     def bot(self):
-        return self.bot()
+        return self._bot()
 
     async def get_channel(self, channel_type: str) -> Optional[GuildChannel]:
         _id = self.get(channel_type + '_channel', 0)
