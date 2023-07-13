@@ -28,7 +28,8 @@ class MetaData(dict):
     async def get_role(self, role_type: str) -> Optional[Role]:
         _id = self.get(role_type + '_role', 0)
         try:
-            return self.bot.guild.get_role(_id) or await self.bot.guild.fetch_role(_id)
+            _coro = self.bot.guild.fetch_roles
+            return self.bot.guild.get_role(_id) or next((role for role in await _coro() if role.id == _id), None)
         except HTTPException:
             return
 
