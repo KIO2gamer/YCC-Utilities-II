@@ -48,9 +48,8 @@ class MongoDBClient:
             raise SystemExit()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self._session.end_session()
-        return False
 
     async def get_metadata(self) -> MetaData:
         data = await self.metadata.find_one({}, session=self._session)
