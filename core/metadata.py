@@ -72,3 +72,7 @@ class MetaData(dict):
     @property
     def activity(self) -> Optional[str]:
         return self.get('activity')
+
+    @property
+    def welcome_msg(self) -> Optional[str]:
+        return self.get('welcome_msg', 'Welcome to the server <member>!')

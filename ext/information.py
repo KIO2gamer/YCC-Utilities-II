@@ -156,25 +156,6 @@ class InformationCommands(commands.Cog):
         await ctx.send(embed=translation_embed)
 
     @commands.command(
-        name='remind',
-        aliases=[],
-        description='Sets a reminder and has the bot DM you after the specified duration has passed.',
-        extras={'requirement': 1}
-    )
-    async def remind(self, ctx: CustomContext, duration: str, *, message: str = _reason):
-        _time_delta = self.bot.convert_duration(duration, allow_any_duration=True)
-        seconds = _time_delta.total_seconds()
-        til = round(utcnow().timestamp() + seconds)
-
-        await self.bot.good_embed(ctx, f'*Done! I will attempt to remind you <t:{til}:R>.*')
-        await sleep(seconds)
-
-        try:
-            await self.bot.neutral_embed(ctx.author, f'**You set a reminder <t:{round(til - seconds)}:R>:** {message}')
-        except HTTPException:
-            pass
-
-    @commands.command(
         name='afk',
         aliases=[],
         description='Sets your status as AFK. The bot will notify any member who tries to ping you that you\'re AFK.',

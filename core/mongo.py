@@ -86,7 +86,8 @@ class MongoDBClient:
                 'auto_mod_ignored_roles': [],
                 'auto_mod_ignored_channels': [],
 
-                'activity': None
+                'activity': None,
+                'welcome_msg': None
             }
             await self.metadata.insert_one(default, session=self._session)
             data = default
