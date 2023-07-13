@@ -1,16 +1,18 @@
 from unicodedata import normalize
 from datetime import timedelta
 from random import randint
-from typing import Callable
+from typing import Callable, Optional
 
 from discord.ext import commands
 from discord.abc import GuildChannel
 from discord.utils import utcnow
 from discord import (
+    PermissionOverwrite,
     HTTPException,
     Message,
     Member,
-    User
+    User,
+    Role
 )
 
 from main import CustomBot
@@ -22,9 +24,11 @@ class ModerationCommands(commands.Cog):
 
     _reason = 'No reason provided.'
     _sent_map = {True: '', False: ' (I could not DM them)'}
+    _anti_lock_role_names = ('rmod', 'smod', 'hmod', 'senior')
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
+        self.locked_channels = {}
 
     @staticmethod
     async def _try_send(func: Callable, *args) -> bool:
@@ -41,6 +45,9 @@ class ModerationCommands(commands.Cog):
                     _user_id=_user_id, _type=_type, _channel_id=_channel_id, _active=True, active=False)
             except ModLogNotFound:
                 break
+
+    async def _anti_lock_roles(self) -> list[Optional[Role]]:
+        return [await self.bot.metadata.get_role(role_name) for role_name in self._anti_lock_role_names]
 
     @commands.command(
         name='decancer',
@@ -372,6 +379,59 @@ class ModerationCommands(commands.Cog):
             purged = await ctx.channel.purge(limit=purge_limit, check=message_check)
 
         await ctx.send(f'*Purged {len(purged)} messages.*', delete_after=5)
+
+    @commands.command(
+        name='lock',
+        aliases=['lockchannel'],
+        description='Locks down a channel, preventing all non-staff members from using it.',
+        extras={'requirement': 4}
+    )
+    @commands.bot_has_permissions(manage_roles=True)
+    @commands.cooldown(1, 15)
+    async def lock(self, ctx: CustomContext, c: GuildChannel = None):
+        c = c or ctx.channel
+        if c in self.locked_channels:
+            raise Exception(f'{c.mention} is already locked.')
+
+        everyone: Role = self.bot.guild.default_role
+        al_roles: list[Role] = [role for role in await self._anti_lock_roles() if role is not None]
+
+        self.locked_channels[c] = {everyone: c.overwrites_for(everyone)} | {r: c.overwrites_for(r) for r in al_roles}
+
+        everyone_ovr_map: dict[Role, PermissionOverwrite] = {everyone: c.overwrites_for(everyone)}
+        al_roles_ovr_map: dict[Role, PermissionOverwrite] = {r: c.overwrites_for(r) for r in al_roles}
+
+        everyone_ovr = everyone_ovr_map[everyone]
+        everyone_ovr.update(send_messages=False, add_reactions=False, connect=False, send_messages_in_threads=False)
+        await c.set_permissions(everyone, overwrite=everyone_ovr)
+
+        for role in al_roles_ovr_map:
+            ovr = al_roles_ovr_map[role]
+            ovr.update(send_messages=True, add_reactions=True, connect=True, send_messages_in_threads=True)
+            await c.set_permissions(role, overwrite=ovr)
+
+        await self.bot.good_embed(ctx, f'*{c.mention} has been locked!*')
+
+    @commands.command(
+        name='unlock',
+        aliases=['unlockchannel'],
+        description='Unlocks a locked channel, reversing the effects of the `lock` command.',
+        extras={'requirement': 4}
+    )
+    @commands.bot_has_permissions(manage_roles=True)
+    @commands.cooldown(1, 15)
+    async def unlock(self, ctx: CustomContext, channel: GuildChannel = None):
+        channel = channel or ctx.channel
+        if channel not in self.locked_channels:
+            raise Exception(f'{channel.mention} is not locked.')
+
+        original_overwrites: dict[Role, PermissionOverwrite] = self.locked_channels[channel]
+        self.locked_channels.pop(channel)
+
+        for role in original_overwrites:
+            await channel.set_permissions(role, overwrite=original_overwrites[role])
+
+        await self.bot.good_embed(ctx, f'*{channel.mention} has been unlocked!*')
 
 
 async def setup(bot: CustomBot):
