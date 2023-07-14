@@ -3,7 +3,7 @@ import asyncio
 import logging
 from time import time
 from datetime import timedelta
-from typing import Union, Optional
+from typing import Optional
 from traceback import format_exception as format_error
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -123,7 +123,7 @@ class CustomBot(commands.Bot):
             if raise_exception is True:
                 raise error
 
-    async def member_clearance(self, member: Union[User, Member]) -> int:
+    async def member_clearance(self, member: User | Member) -> int:
         if member.id in self.owner_ids or member == self.guild.owner:
             return 9
         elif isinstance(member, User):
@@ -145,7 +145,7 @@ class CustomBot(commands.Bot):
             2 if data.get('tmod_role') in roles else \
             1 if data.get('helper_role') in roles else 0
 
-    async def check_target_member(self, member: Union[User, Member]) -> None:
+    async def check_target_member(self, member: User | Member) -> None:
         if await self.member_clearance(member) > 0:
             raise commands.CheckFailure('The target of this moderation is protected.')
 

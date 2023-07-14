@@ -12,7 +12,7 @@ class CustomContext(commands.Context):
     async def to_modlog_data(self, user_id: int, **kwargs) -> dict:
         _type = self.command.callback.__name__
         return {
-            'case_id': await self.bot.mongo_db.generate_id(),
+            'case_id': await self.bot.mongo_db.new_modlog_id(),
             'mod_id': self.author.id,
             'user_id': user_id,
             'channel_id': kwargs.get('channel_id', 0),

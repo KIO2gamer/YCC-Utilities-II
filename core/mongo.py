@@ -1,7 +1,8 @@
 import logging
+from time import time
 
 from certifi import where
-from pymongo import ReturnDocument
+from pymongo import ReturnDocument, DESCENDING
 from pymongo.errors import (
     ConfigurationError,
     ServerSelectionTimeoutError
@@ -37,6 +38,8 @@ class MongoDBClient:
         self.database: AsyncIOMotorDatabase = self.client.database
         self.metadata: AsyncIOMotorCollection = self.database.metadata
         self.modlogs: AsyncIOMotorCollection = self.database.modlogs
+        self.msg_stats: AsyncIOMotorCollection = self.database.msg_stats
+        self.vc_stats: AsyncIOMotorCollection = self.database.vc_stats
 
         self._session = None
 
@@ -104,23 +107,14 @@ class MongoDBClient:
         # Edit `CustomBot.metadata` in-place rather than returning a new version
         self.bot.metadata = MetaData(self.bot, **data)
 
-    async def generate_id(self) -> int:
-        return 1 \
-            + await self.modlogs.count_documents({}, session=self._session)
+    async def new_modlog_id(self) -> int:
+        modlog = await self.modlogs.find_one(sort=[('case_id', DESCENDING)], session=self._session)
+        return modlog.get('case_id') + 1 if modlog else 1
 
     async def insert_modlog(self, **kwargs) -> ModLogEntry:
         await self.modlogs.insert_one(kwargs, session=self._session)
         logging.info(f'New modlog entry created - Case ID: {kwargs.get("case_id")}')
         return ModLogEntry(self.bot, **kwargs)
-
-    async def search_modlog(self, **kwargs) -> list[ModLogEntry]:
-        data = self.modlogs.find(kwargs, session=self._session)
-        modlogs = [ModLogEntry(self.bot, **entry) async for entry in data]
-
-        if not modlogs:
-            raise ModLogNotFound()
-
-        return modlogs
 
     async def update_modlog(self, **kwargs) -> ModLogEntry:
         # Kwargs with leading underscores are our search parameters
@@ -147,3 +141,30 @@ class MongoDBClient:
         logging.info(f'Updated existing modlog entry - Case ID: {data.get("case_id")} - Updated: {update_dict}')
 
         return ModLogEntry(self.bot, **data)
+
+    async def search_modlog(self, **kwargs) -> list[ModLogEntry]:
+        data = self.modlogs.find(kwargs, session=self._session)
+        modlogs = [ModLogEntry(self.bot, **entry) async for entry in data]
+
+        if not modlogs:
+            raise ModLogNotFound()
+
+        return modlogs
+
+    async def dump_msg_stats(self, entries: list[dict]):
+        if not entries:
+            return
+        await self.msg_stats.insert_many(entries, session=self._session)
+
+    async def get_msg_stats(self, lookback: int | float, **kwargs) -> list[dict]:
+        _m = time() - lookback
+        return [entry async for entry in self.msg_stats.find({'created': {'$gt': _m}} | kwargs, session=self._session)]
+
+    async def dump_vc_stats(self, entries: list[dict]):
+        if not entries:
+            return
+        await self.vc_stats.insert_many(entries, session=self._session)
+
+    async def get_vc_stats(self, lookback: int | float, **kwargs) -> list[dict]:
+        _m = time() - lookback
+        return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}} | kwargs, session=self._session)]
