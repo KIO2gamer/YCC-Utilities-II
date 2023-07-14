@@ -119,7 +119,7 @@ class MongoDBClient:
 
     async def update_modlog(self, **kwargs) -> ModLogEntry:
         # Kwargs with leading underscores are our search parameters
-        # Kwargs without leading underscore are our values to update
+        # Kwargs without leading underscores are our values to update
         search_dict = {}
         update_dict = {}
 
