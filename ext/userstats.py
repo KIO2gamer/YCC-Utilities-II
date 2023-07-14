@@ -19,6 +19,10 @@ from core.context import CustomContext
 
 class UserStatistics(commands.Cog):
 
+    MOD_STAT_TYPES = {'dm': 'DMs', 'warn': 'Warns', 'kick': 'Kicks',
+                      'mute': 'Mutes', 'ban': 'Bans', 'channel_ban': 'Channel Bans',
+                      'unmute': 'Unmutes', 'unban': 'Unbans', 'channel_unban': 'Channel Unbans'}
+
     def __init__(self, bot: CustomBot):
         self.bot = bot
         self.msg_stats, self.vc_stats, self.pending_vc_stats = [], [], []
@@ -144,29 +148,29 @@ class UserStatistics(commands.Cog):
             guild = self.bot.guild
             nd = '`No data to be displayed`'
 
-            all_stats_embed = Embed(color=Color.blue(), title=guild, description=f'**Since {format_dt(since_dt)}**')
-            all_stats_embed.set_author(name='Top Statistics', icon_url=avatar)
-            all_stats_embed.set_thumbnail(url=guild.icon or avatar)
-            all_stats_embed.set_footer(text=f'Try out {self.bot.command_prefix}stats to view your own stats!')
+            topstats_embed = Embed(color=Color.blue(), title=guild, description=f'**Since {format_dt(since_dt, "F")}**')
+            topstats_embed.set_author(name='Top Statistics', icon_url=avatar)
+            topstats_embed.set_thumbnail(url=guild.icon or avatar)
+            topstats_embed.set_footer(text=f'Try out {self.bot.command_prefix}stats to view your own stats!')
 
-            all_stats_embed.add_field(
+            topstats_embed.add_field(
                 name='User Messages:',
                 value='\n'.join([f'> <@{u}>**: {umc[u]:,}**' for u in list(umc)[:5]]) or nd,
                 inline=False)
-            all_stats_embed.add_field(
+            topstats_embed.add_field(
                 name='Channel Messages:',
                 value='\n'.join([f'> <#{c}>**: {cmc[c]:,}**' for c in list(cmc)[:5]]) or nd,
                 inline=False)
-            all_stats_embed.add_field(
+            topstats_embed.add_field(
                 name='User VC Activity:',
                 value='\n'.join([f'> <@{u}>**: `{timedelta(seconds=round(uvt[u]))}`**' for u in list(uvt)[:5]]) or nd,
                 inline=False)
-            all_stats_embed.add_field(
+            topstats_embed.add_field(
                 name='Channel VC Activity:',
                 value='\n'.join([f'> <#{c}>**: `{timedelta(seconds=round(cvt[c]))}`**' for c in list(cvt)[:5]]) or nd,
                 inline=False)
 
-        await ctx.send(embed=all_stats_embed)
+        await ctx.send(embed=topstats_embed)
 
     @commands.command(
         name='stats',
@@ -204,7 +208,7 @@ class UserStatistics(commands.Cog):
             guild = self.bot.guild
             url = target.avatar or target.default_avatar if isinstance(target, (User, Member)) else guild.icon or avatar
 
-            stats_embed = Embed(color=Color.blue(), title=target, description=f'**Since {format_dt(since_dt)}**')
+            stats_embed = Embed(color=Color.blue(), title=target, description=f'**Since {format_dt(since_dt, "F")}**')
             stats_embed.set_author(name=author, icon_url=avatar)
             stats_embed.set_thumbnail(url=url)
             stats_embed.set_footer(text=f'Try out {self.bot.command_prefix}topstats to view the top rankings!')
@@ -219,6 +223,37 @@ class UserStatistics(commands.Cog):
                 inline=False)
 
         await ctx.send(embed=stats_embed)
+
+    @commands.command(
+        name='modstats',
+        aliases=[],
+        description='View the moderations statistics of a user.',
+        extras={'requirement': 5}
+    )
+    async def modstats(self, ctx: CustomContext, user: User = None, lookback: str = '28d'):
+        async with ctx.typing():
+            user = user or ctx.author
+
+            _time_delta = self.bot.convert_duration(lookback)
+            seconds = _time_delta.total_seconds()
+            now = utcnow()
+
+            modlogs = await self.bot.mongo_db.search_modlog(mod_id=user.id)
+            modlogs = [modlog for modlog in modlogs if modlog.created > now.timestamp() - seconds]
+
+            avatar = self.bot.user.avatar
+            since_dt = now - _time_delta
+
+            modstats_embed = Embed(colour=Color.blue(), title=user, description=f'**Since {format_dt(since_dt, "F")}**')
+            modstats_embed.set_author(name='User Moderation Statistics', icon_url=avatar)
+            modstats_embed.set_thumbnail(url=user.avatar or self.bot.guild.icon or avatar)
+
+            for stat_type in self.MOD_STAT_TYPES:
+                modstats_embed.add_field(
+                    name=self.MOD_STAT_TYPES[stat_type],
+                    value=f'> **`{len([modlog for modlog in modlogs if modlog.type == stat_type]):,}`**')
+
+        await ctx.send(embed=modstats_embed)
 
 
 async def setup(bot: CustomBot):
