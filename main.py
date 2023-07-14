@@ -61,8 +61,8 @@ class CustomBot(commands.Bot):
         )
 
         self.guild_id = config.GUILD_ID
-        self.guild = self.mongo_db = self.metadata = self.bans = None
-
+        self.guild = self.mongo_db = self.metadata = None
+        self.bans = []
         self.perm_duration = 2 ** 32 - 1
 
         self.add_check(enforce_clearance, call_once=True)

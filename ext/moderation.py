@@ -5,7 +5,7 @@ from typing import Callable, Optional
 
 from discord.ext import commands
 from discord.abc import GuildChannel
-from discord.utils import utcnow
+from discord.utils import utcnow, MISSING
 from discord import (
     PermissionOverwrite,
     HTTPException,
@@ -18,6 +18,7 @@ from discord import (
 from main import CustomBot
 from core.context import CustomContext
 from core.errors import DurationError, ModLogNotFound
+from components.appeal import BanAppealView
 
 
 class ModerationCommands(commands.Cog):
@@ -31,9 +32,9 @@ class ModerationCommands(commands.Cog):
         self.locked_channels = {}
 
     @staticmethod
-    async def _try_send(func: Callable, *args) -> bool:
+    async def _try_send(func: Callable, *args, **kwargs) -> bool:
         try:
-            await func(*args)
+            await func(*args, **kwargs)
             return True
         except HTTPException:
             return False
@@ -214,7 +215,11 @@ class ModerationCommands(commands.Cog):
 
         until_str = f' until <t:{til}:F>' if permanent is False else ''
         message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
-        sent = await self._try_send(self.bot.bad_embed, user, message)
+
+        appeal_url = self.bot.metadata.appeal_url
+        view = BanAppealView(appeal_url) if appeal_url else MISSING
+
+        sent = await self._try_send(self.bot.bad_embed, user, message, view=view)
 
         await self.bot.guild.ban(user, delete_message_days=0)
 
