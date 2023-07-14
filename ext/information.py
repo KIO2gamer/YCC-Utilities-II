@@ -3,7 +3,7 @@ from asyncio import sleep
 from datetime import timedelta
 
 from discord.ext import commands
-from discord.utils import format_dt, utcnow
+from discord.utils import format_dt
 from discord import (
     HTTPException,
     Message,
