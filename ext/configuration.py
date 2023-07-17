@@ -147,7 +147,7 @@ class ConfigurationCommands(commands.Cog):
         name='config-ignored',
         aliases=[],
         description='Toggles a role/channel as being "ignored" by the auto-mod or event logger.',
-        extras={'requirement': 0}
+        extras={'requirement': 9}
     )
     async def config_ignored(self, ctx: CustomContext, ignored_type: IGNORED_TYPES, target: GuildChannel | Role):
         str_type = 'roles' if isinstance(target, Role) else 'channels'
