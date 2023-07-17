@@ -217,7 +217,7 @@ class ModerationCommands(commands.Cog):
         message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
 
         appeal_url = self.bot.metadata.appeal_url
-        view = BanAppealView(appeal_url) if appeal_url else MISSING
+        view = BanAppealView(appeal_url) if appeal_url and user.id not in self.bot.metadata.appeal_bl else MISSING
 
         sent = await self._try_send(self.bot.bad_embed, user, message, view=view)
 
