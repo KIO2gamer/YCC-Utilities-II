@@ -1,8 +1,11 @@
 from typing import Literal
+from urllib.parse import urlparse
 
 from discord.ext import commands
 from discord.abc import GuildChannel
 from discord import (
+    ActivityType,
+    Activity,
     User,
     Role
 )
@@ -97,6 +100,47 @@ class ConfigurationCommands(commands.Cog):
             msg = f'*Added {user.mention} to the `{blacklist_type}` blacklist.*'
         await self.bot.mongo_db.update_metadata(**{f'{blacklist_type}_bl': bl})
         await self.bot.good_embed(ctx, msg)
+
+    @commands.command(
+        name='set-status',
+        aliases=[],
+        description='Edits the bot\'s status to `Listening to <status>`.',
+        extras={'requirement': 9}
+    )
+    async def set_status(self, ctx: CustomContext, *, status: str):
+        await self.bot.change_presence(activity=Activity(type=ActivityType.listening, name=status))
+        await self.bot.mongo_db.update_metadata(activity=status)
+        await self.bot.good_embed(ctx, f'*Set status as `{status}`!*')
+
+    @commands.command(
+        name='set-welcome',
+        aliases=[],
+        description='Edits the welcome message sent when a member joins. Use `<member>` to mention the member.',
+        extras={'requirement': 9}
+    )
+    async def set_welcome(self, ctx: CustomContext, *, message: str):
+        await self.bot.mongo_db.update_metadata(welcome_msg=message)
+        await self.bot.good_embed(ctx, f'*Set welcome message as `{message}`!*')
+
+    @commands.command(
+        name='set-appeal-url',
+        aliases=[],
+        description='Edits the ban appeal URL that gets sent to banned users. Use `off` to disable this feature.',
+        extras={'requirement': 9}
+    )
+    async def set_appeal_url(self, ctx: CustomContext, *, url: str):
+        if url == 'off':
+            url = None
+        else:
+            try:
+                result = urlparse(url)
+                valid = all([result.scheme, result.netloc])
+            except ValueError:
+                valid = False
+            if valid is False:
+                raise Exception('Invalid URL provided.')
+        await self.bot.mongo_db.update_metadata(appeal_url=url)
+        await self.bot.good_embed(ctx, f'*Set appeal URL as `{url}`!*')
 
 
 async def setup(bot: CustomBot):
