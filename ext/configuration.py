@@ -2,7 +2,10 @@ from typing import Literal
 
 from discord.ext import commands
 from discord.abc import GuildChannel
-from discord import Role
+from discord import (
+    User,
+    Role
+)
 
 from main import CustomBot
 from core.context import CustomContext
@@ -14,6 +17,7 @@ class ConfigurationCommands(commands.Cog):
     ROLE_TYPES = Literal['admin', 'bot', 'senior', 'hmod', 'smod', 'rmod', 'tmod', 'helper', 'trivia', 'active']
     ROLE_TYPES_MAP = {'bot': 'Bot Admin', 'senior': 'Senior Staff', 'hmod': 'Head Moderator',
                       'smod': 'Senior Moderator', 'rmod': 'Moderator', 'tmod': 'Trainee Moderator'}
+    BLACKLIST_TYPES = Literal['suggest', 'trivia', 'appeal']
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -74,6 +78,24 @@ class ConfigurationCommands(commands.Cog):
             bl.append(domain)
             msg = f'*Added `{domain}` to the domain blacklist.*'
         await self.bot.mongo_db.update_metadata(domain_bl=bl)
+        await self.bot.good_embed(ctx, msg)
+
+    @commands.command(
+        name='blacklist',
+        aliases=[],
+        description='Blacklists a user from one of the bot\'s features (`suggest`, `trivia` or `appeal`).',
+        extras={'requirement': 4}
+    )
+    async def blacklist(self, ctx: CustomContext, blacklist_type: BLACKLIST_TYPES, user: User):
+        bl = [_ for _ in self.bot.metadata.__getattribute__(f'{blacklist_type}_bl')]
+        if user.id in bl:
+            bl.remove(user.id)
+            msg = f'*Removed {user.mention} from the `{blacklist_type}` blacklist.*'
+        else:
+            await self.bot.check_target_member(user)
+            bl.append(user.id)
+            msg = f'*Added {user.mention} to the `{blacklist_type}` blacklist.*'
+        await self.bot.mongo_db.update_metadata(**{f'{blacklist_type}_bl': bl})
         await self.bot.good_embed(ctx, msg)
 
 
