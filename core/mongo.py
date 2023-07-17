@@ -21,6 +21,41 @@ from core.metadata import MetaData
 
 class MongoDBClient:
 
+    DEFAULT_METADATA = {
+        'appeal_channel': None,
+        'trivia_channel': None,
+        'suggest_channel': None,
+        'general_channel': None,
+        'logging_channel': None,
+
+        'admin_role': None,
+        'bot_role': None,
+        'senior_role': None,
+        'hmod_role': None,
+        'smod_role': None,
+        'rmod_role': None,
+        'tmod_role': None,
+        'helper_role': None,
+        'trivia_role': None,
+        'active_role': None,
+
+        'domain_bl': [],
+        'domain_wl': [],
+
+        'appeal_bl': [],
+        'trivia_bl': [],
+        'suggest_bl': [],
+
+        'event_ignored_roles': [],
+        'event_ignored_channels': [],
+        'auto_mod_ignored_roles': [],
+        'auto_mod_ignored_channels': [],
+
+        'activity': None,
+        'welcome_msg': None,
+        'appeal_url': None
+    }
+
     def __init__(self, bot, connection_uri: str):
         self.bot = bot
 
@@ -58,43 +93,8 @@ class MongoDBClient:
         data = await self.metadata.find_one({}, session=self._session)
 
         if data is None:
-            default = {
-                'appeal_channel': None,
-                'trivia_channel': None,
-                'suggest_channel': None,
-                'general_channel': None,
-                'logging_channel': None,
-
-                'admin_role': None,
-                'bot_role': None,
-                'senior_role': None,
-                'hmod_role': None,
-                'smod_role': None,
-                'rmod_role': None,
-                'tmod_role': None,
-                'helper_role': None,
-
-                'trivia_role': None,
-                'active_role': None,
-
-                'domain_bl': [],
-                'domain_wl': [],
-
-                'appeal_bl': [],
-                'trivia_bl': [],
-                'suggest_bl': [],
-
-                'event_ignored_roles': [],
-                'event_ignored_channels': [],
-                'auto_mod_ignored_roles': [],
-                'auto_mod_ignored_channels': [],
-
-                'activity': None,
-                'welcome_msg': None,
-                'appeal_url': None
-            }
-            await self.metadata.insert_one(default, session=self._session)
-            data = default
+            data = self.DEFAULT_METADATA
+            await self.metadata.insert_one(data, session=self._session)
 
         return MetaData(self.bot, **data)
 
