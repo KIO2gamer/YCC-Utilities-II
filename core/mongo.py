@@ -157,15 +157,15 @@ class MongoDBClient:
             return
         await self.msg_stats.insert_many(entries, session=self._session)
 
-    async def get_msg_stats(self, lookback: int | float, **kwargs) -> list[dict]:
+    async def get_msg_stats(self, lookback: int | float) -> list[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.msg_stats.find({'created': {'$gt': _m}} | kwargs, session=self._session)]
+        return [entry async for entry in self.msg_stats.find({'created': {'$gt': _m}}, session=self._session)]
 
     async def dump_vc_stats(self, entries: list[dict]):
         if not entries:
             return
         await self.vc_stats.insert_many(entries, session=self._session)
 
-    async def get_vc_stats(self, lookback: int | float, **kwargs) -> list[dict]:
+    async def get_vc_stats(self, lookback: int | float) -> list[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}} | kwargs, session=self._session)]
+        return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}}, session=self._session)]
