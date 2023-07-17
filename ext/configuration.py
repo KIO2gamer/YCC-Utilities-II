@@ -21,6 +21,7 @@ class ConfigurationCommands(commands.Cog):
     ROLE_TYPES_MAP = {'bot': 'Bot Admin', 'senior': 'Senior Staff', 'hmod': 'Head Moderator',
                       'smod': 'Senior Moderator', 'rmod': 'Moderator', 'tmod': 'Trainee Moderator'}
     BLACKLIST_TYPES = Literal['suggest', 'trivia', 'appeal']
+    IGNORED_TYPES = Literal['event', 'auto_mod']
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -141,6 +142,24 @@ class ConfigurationCommands(commands.Cog):
                 raise Exception('Invalid URL provided.')
         await self.bot.mongo_db.update_metadata(appeal_url=url)
         await self.bot.good_embed(ctx, f'*Set appeal URL as `{url}`!*')
+
+    @commands.command(
+        name='config-ignored',
+        aliases=[],
+        description='Toggles a role/channel as being "ignored" by the auto-mod or event logger.',
+        extras={'requirement': 0}
+    )
+    async def config_ignored(self, ctx: CustomContext, ignored_type: IGNORED_TYPES, target: GuildChannel | Role):
+        str_type = 'roles' if isinstance(target, Role) else 'channels'
+        id_list = [_ for _ in self.bot.metadata.__getattribute__(f'{ignored_type}_ignored_{str_type}')]
+        if target.id in id_list:
+            id_list.remove(target.id)
+            msg = f'*Removed {target.mention} from the list of ignored `{ignored_type}` {str_type}.*'
+        else:
+            id_list.append(target.id)
+            msg = f'*Added {target.mention} to the list of ignored `{ignored_type}` {str_type}.*'
+        await self.bot.mongo_db.update_metadata(**{f'{ignored_type}_ignored_{str_type}': id_list})
+        await self.bot.good_embed(ctx, msg)
 
 
 async def setup(bot: CustomBot):
