@@ -42,6 +42,40 @@ class ConfigurationCommands(commands.Cog):
         msg = f'*Set {role.mention} as the new `{self.ROLE_TYPES_MAP.get(role_type, role_type.capitalize())}` role.*'
         await self.bot.good_embed(ctx, msg)
 
+    @commands.command(
+        name='wldomain',
+        aliases=[],
+        description='Toggles the whitelisting of a URL domain.',
+        extras={'requirement': 4}
+    )
+    async def wldomain(self, ctx: CustomContext, domain: str):
+        wl = [_ for _ in self.bot.metadata.domain_wl]
+        if domain in wl:
+            wl.remove(domain)
+            msg = f'*Removed `{domain}` from the domain whitelist.*'
+        else:
+            wl.append(domain)
+            msg = f'*Added `{domain}` to the domain whitelist.*'
+        await self.bot.mongo_db.update_metadata(domain_wl=wl)
+        await self.bot.good_embed(ctx, msg)
+
+    @commands.command(
+        name='bldomain',
+        aliases=[],
+        description='Toggles the blacklisting of a URL domain.',
+        extras={'requirement': 4}
+    )
+    async def bldomain(self, ctx: CustomContext, domain: str):
+        bl = [_ for _ in self.bot.metadata.domain_bl]
+        if domain in bl:
+            bl.remove(domain)
+            msg = f'*Removed `{domain}` from the domain blacklist.*'
+        else:
+            bl.append(domain)
+            msg = f'*Added `{domain}` to the domain blacklist.*'
+        await self.bot.mongo_db.update_metadata(domain_bl=bl)
+        await self.bot.good_embed(ctx, msg)
+
 
 async def setup(bot: CustomBot):
     await bot.add_cog(ConfigurationCommands(bot))
