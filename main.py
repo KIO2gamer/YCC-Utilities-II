@@ -34,6 +34,7 @@ try:
     from core.embed import EmbedField, CustomEmbed
     from core.errors import DurationError, ModLogNotFound
     from core.context import CustomContext, enforce_clearance
+    from core.help import CustomHelpCommand
     from core.metadata import MetaData
     from components.traceback import TracebackView
 
@@ -57,7 +58,7 @@ class CustomBot(commands.Bot):
             command_prefix=config.PREFIX,
             intents=intents,
             owner_ids=config.OWNERS,
-            help_command=None,
+            help_command=CustomHelpCommand(),
             case_insensitive=True,
             max_messages=10000
         )
@@ -159,6 +160,10 @@ class CustomBot(commands.Bot):
         if isinstance(error, (commands.CheckFailure, commands.CommandNotFound)):
             return
 
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await self.send_command_help(ctx, ctx.command)
+            return
+
         elif isinstance(error, commands.CommandOnCooldown):
             message = f'Wait `{round(error.retry_after)}s` before doing that again.'
             reset_cooldown = False
@@ -189,6 +194,30 @@ class CustomBot(commands.Bot):
             traceback = '```py' + traceback[1995:]
 
         await message.edit(view=TracebackView(self, message, traceback))
+
+    async def send_command_help(self, ctx: CustomContext, command: commands.Command):
+        requirement = command.extras.get('requirement', 0)
+        # noinspection PyUnresolvedReferences
+        if await self.member_clearance(ctx.author) < requirement:
+            return
+
+        description, aliases, name, params = command.description, command.aliases, command.name, command.clean_params
+        params_str = " ".join([f'{"opt" if not params[param].required else ""}<{param}>' for param in params])
+
+        command_help_embed = Embed(
+            color=Color.blue(),
+            title=f'{self.command_prefix}{name} Command',
+            description=description + f' Requires server permission level `{requirement}` or higher.')
+        command_help_embed.set_author(name='Help Menu', icon_url=self.user.avatar or self.user.default_avatar)
+        command_help_embed.set_footer(text=f'Use {self.command_prefix}help to view all commands.')
+
+        command_help_embed.add_field(name='Usage:',
+                                     value=f'`{self.command_prefix}{name} {params_str}`',
+                                     inline=False)
+        command_help_embed.add_field(name='Aliases:',
+                                     value=f'`{", ".join([alias for alias in aliases])}`' if aliases else '`None`',
+                                     inline=False)
+        await ctx.send(embed=command_help_embed)
 
     async def on_message(self, message: Message) -> None:
         if not message.guild or message.guild.id != self.guild_id or message.author.bot:
