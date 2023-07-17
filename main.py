@@ -21,6 +21,7 @@ try:
         LoginFailure,
         PrivilegedIntentsRequired,
         User,
+        Guild,
         Member,
         Embed,
         Color
@@ -33,6 +34,7 @@ try:
     from core.embed import EmbedField, CustomEmbed
     from core.errors import DurationError, ModLogNotFound
     from core.context import CustomContext, enforce_clearance
+    from core.metadata import MetaData
     from components.traceback import TracebackView
 
 except ModuleNotFoundError as unknown_import:
@@ -60,10 +62,12 @@ class CustomBot(commands.Bot):
             max_messages=10000
         )
 
-        self.guild_id = config.GUILD_ID
-        self.guild = self.mongo_db = self.metadata = None
-        self.bans = []
-        self.perm_duration = 2 ** 32 - 1
+        self.guild_id: int = config.GUILD_ID
+        self.guild: Optional[Guild] = None
+        self.mongo_db: Optional[MongoDBClient] = None
+        self.metadata: Optional[MetaData] = None
+        self.bans: list[int] = []
+        self.perm_duration: int = 2 ** 32 - 1
 
         self.add_check(enforce_clearance, call_once=True)
 
