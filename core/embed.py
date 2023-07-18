@@ -8,6 +8,9 @@ class EmbedField:
         self.text: str = kwargs.get('text', 'Text')
         self.inline: bool = kwargs.get('inline', False)
 
+    def __len__(self):
+        return len(self.name) + len(self.text)
+
 
 class CustomEmbed(Embed):
 

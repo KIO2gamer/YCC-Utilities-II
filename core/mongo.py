@@ -1,5 +1,6 @@
 import logging
 from time import time
+from typing import Literal
 
 from certifi import where
 from pymongo import ReturnDocument, DESCENDING
@@ -56,6 +57,8 @@ class MongoDBClient:
         'appeal_url': None
     }
 
+    COMMAND_TYPES = Literal['faq', 'custom']
+
     def __init__(self, bot, connection_uri: str):
         self.bot = bot
 
@@ -75,6 +78,8 @@ class MongoDBClient:
         self.modlogs: AsyncIOMotorCollection = self.database.modlogs
         self.msg_stats: AsyncIOMotorCollection = self.database.msg_stats
         self.vc_stats: AsyncIOMotorCollection = self.database.vc_stats
+        self.faq_commands: AsyncIOMotorCollection = self.database.faq_commands
+        self.custom_commands: AsyncIOMotorCollection = self.database.custom_commands
 
         self._session = None
 
@@ -169,3 +174,14 @@ class MongoDBClient:
     async def get_vc_stats(self, lookback: int | float) -> list[dict]:
         _m = time() - lookback
         return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}}, session=self._session)]
+
+    async def get_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
+        return [cmd async for cmd in self.__getattribute__(f'{command_type}_commands').find({}, session=self._session)]
+
+    async def insert_command(self, command_type: COMMAND_TYPES, **kwargs) -> dict:
+        await self.__getattribute__(f'{command_type}_commands').insert_one(kwargs, session=self._session)
+        return kwargs
+
+    async def delete_command(self, command_type: COMMAND_TYPES, **kwargs) -> bool:
+        result = await self.__getattribute__(f'{command_type}_commands').delete_one(kwargs, session=self._session)
+        return bool(result.deleted_count)
