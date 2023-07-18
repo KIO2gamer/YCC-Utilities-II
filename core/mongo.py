@@ -175,7 +175,7 @@ class MongoDBClient:
         _m = time() - lookback
         return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}}, session=self._session)]
 
-    async def get_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
+    async def fetch_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
         return [cmd async for cmd in self.__getattribute__(f'{command_type}_commands').find({}, session=self._session)]
 
     async def insert_command(self, command_type: COMMAND_TYPES, **kwargs) -> dict:

@@ -154,6 +154,13 @@ class CustomBot(commands.Bot):
         if await self.member_clearance(member) > 0:
             raise commands.CheckFailure('The target of this moderation is protected.')
 
+    async def command_names(self) -> list[str]:
+        faqs = [entry.get('shortcut') for entry in await self.mongo_db.fetch_commands('faq')]
+        customs = [entry.get('shortcut') for entry in await self.mongo_db.fetch_commands('custom')]
+        aliases = [alias for command in self.commands for alias in command.aliases if command.aliases]
+        regular = [command.name for command in self.commands]
+        return faqs + customs + regular + aliases
+
     async def on_command_error(self, ctx: CustomContext, error: commands.CommandError) -> None:
         reset_cooldown = True
 
@@ -195,7 +202,7 @@ class CustomBot(commands.Bot):
 
         await message.edit(view=TracebackView(self, message, traceback))
 
-    async def send_command_help(self, ctx: CustomContext, command: commands.Command):
+    async def send_command_help(self, ctx: CustomContext, command: commands.Command) -> None:
         requirement = command.extras.get('requirement', 0)
         # noinspection PyUnresolvedReferences
         if await self.member_clearance(ctx.author) < requirement:
@@ -215,7 +222,7 @@ class CustomBot(commands.Bot):
                                      value=f'`{self.command_prefix}{name} {params_str}`',
                                      inline=False)
         command_help_embed.add_field(name='Aliases:',
-                                     value=f'`{", ".join([alias for alias in aliases])}`' if aliases else '`None`',
+                                     value=f'`{", ".join(aliases)}`' if aliases else '`None`',
                                      inline=False)
         await ctx.send(embed=command_help_embed)
 
