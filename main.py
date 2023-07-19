@@ -155,10 +155,10 @@ class CustomBot(commands.Bot):
             raise commands.CheckFailure('The target of this moderation is protected.')
 
     async def command_names(self) -> list[str]:
-        faqs = [entry.get('shortcut') for entry in await self.mongo_db.fetch_commands('faq')]
-        customs = [entry.get('shortcut') for entry in await self.mongo_db.fetch_commands('custom')]
-        aliases = [alias for command in self.commands for alias in command.aliases if command.aliases]
-        regular = [command.name for command in self.commands]
+        faqs = [entry.get('shortcut', '').lower() for entry in await self.mongo_db.fetch_commands('faq')]
+        customs = [entry.get('shortcut', '').lower() for entry in await self.mongo_db.fetch_commands('custom')]
+        aliases = [alias.lower() for command in self.commands for alias in command.aliases if command.aliases]
+        regular = [command.name.lower() for command in self.commands]
         return faqs + customs + regular + aliases
 
     async def on_command_error(self, ctx: CustomContext, error: commands.CommandError) -> None:
