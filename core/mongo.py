@@ -58,6 +58,7 @@ class MongoDBClient:
     }
 
     COMMAND_TYPES = Literal['faq', 'custom']
+    ROLE_TYPES = Literal['persistent', 'custom']
 
     def __init__(self, bot, connection_uri: str):
         self.bot = bot
@@ -80,6 +81,8 @@ class MongoDBClient:
         self.vc_stats: AsyncIOMotorCollection = self.database.vc_stats
         self.faq_commands: AsyncIOMotorCollection = self.database.faq_commands
         self.custom_commands: AsyncIOMotorCollection = self.database.custom_commands
+        self.persistent_roles: AsyncIOMotorCollection = self.database.persistent_roles
+        self.custom_roles: AsyncIOMotorCollection = self.database.custom_roles
 
         self._session = None
 
@@ -184,4 +187,15 @@ class MongoDBClient:
 
     async def delete_command(self, command_type: COMMAND_TYPES, **kwargs) -> bool:
         result = await self.__getattribute__(f'{command_type}_commands').delete_one(kwargs, session=self._session)
+        return bool(result.deleted_count)
+
+    async def fetch_roles(self, role_type: ROLE_TYPES) -> list[dict]:
+        return [entry async for entry in self.__getattribute__(f'{role_type}_roles').find({}, session=self._session)]
+
+    async def insert_role(self, role_type: ROLE_TYPES, **kwargs) -> dict:
+        await self.__getattribute__(f'{role_type}_roles').insert_one(kwargs, session=self._session)
+        return kwargs
+
+    async def delete_role(self, role_type: ROLE_TYPES, **kwargs) -> bool:
+        result = await self.__getattribute__(f'{role_type}_roles').delete_one(kwargs, session=self._session)
         return bool(result.deleted_count)
