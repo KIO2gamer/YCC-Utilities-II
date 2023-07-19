@@ -21,7 +21,7 @@ from components.giveaway import GiveawayView
 class MiscellaneousCommands(commands.Cog):
 
     COMMAND_EXISTS = '`{0}` is already an existing command name/alias.'
-    ACTIONS = Literal['warn', 'kick', 'mute', 'ban']
+    ACTIONS = Literal['note', 'dm', 'warn', 'kick', 'mute', 'ban', 'unmute', 'unban']
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -112,7 +112,7 @@ class MiscellaneousCommands(commands.Cog):
         shortcut = shortcut.lower()
         if shortcut in await self.bot.command_names():
             raise Exception(self.COMMAND_EXISTS.format(shortcut))
-        elif action in ('warn', 'kick'):
+        elif action in ('warn', 'kick', 'dm', 'note', 'unmute', 'unban'):
             seconds = None
         else:
             _time_delta = self.bot.convert_duration(duration)

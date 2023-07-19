@@ -314,12 +314,14 @@ class CustomBot(commands.Bot):
 
         async def _run_bot():
             async with self, MongoDBClient(self, config.MONGO) as self.mongo_db:
-                for filename in os.listdir('./ext'):
-                    if filename.endswith('.py'):
-                        try:
-                            await self.load_extension(f'ext.{filename[:-3]}')
-                        except (commands.ExtensionFailed, commands.NoEntryPointError) as extension_error:
-                            logging.error(f'Extension {filename} could not be loaded: {extension_error}')
+                for folder in ('./ext', './events'):
+                    for file in os.listdir(folder):
+                        if file.endswith('.py'):
+                            extension = f'{folder[2:]}.{file[:-3]}'
+                            try:
+                                await self.load_extension(extension)
+                            except (commands.ExtensionFailed, commands.NoEntryPointError) as extension_error:
+                                logging.error(f'Extension {extension} could not be loaded: {extension_error}')
                 try:
                     await self.start(config.TOKEN)
                 except LoginFailure:
