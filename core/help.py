@@ -27,7 +27,7 @@ class CustomHelpCommand(commands.HelpCommand):
         bot_help_embed.set_footer(text=f'Use {prefix}help <command> for more info on a single command.')
 
         for cog in mapping:
-            if cog and cog.qualified_name in self.COG_NAME_DICT:
+            if cog and cog.get_commands() and cog.qualified_name in self.COG_NAME_DICT:
                 cog_commands = [command.qualified_name for command in cog.get_commands()]
                 cog_commands_str = f'`{", ".join(cog_commands)}`' if cog_commands else '`No Commands Found`'
                 bot_help_embed.add_field(

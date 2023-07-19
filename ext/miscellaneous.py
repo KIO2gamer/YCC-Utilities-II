@@ -2,7 +2,11 @@ from typing import Literal
 from datetime import timedelta
 
 from discord.ext import commands
+from discord.utils import utcnow, format_dt
 from discord import (
+    TextChannel,
+    Embed,
+    Color,
     Role,
     User
 )
@@ -11,6 +15,7 @@ from main import CustomBot
 from core.context import CustomContext
 from core.embed import EmbedField
 from components.paginator import Paginator
+from components.giveaway import GiveawayView
 
 
 class MiscellaneousCommands(commands.Cog):
@@ -269,6 +274,33 @@ class MiscellaneousCommands(commands.Cog):
         new_colour = int(new_hex.strip('#'), 16)
         await role.edit(name=new_name, color=new_colour)
         await self.bot.good_embed(ctx, f'*Successfully edited {role.mention}.*')
+
+    @commands.command(
+        name='giveaway',
+        aliases=['gw'],
+        description='Starts a giveaway. Note: giveaways are not persistent if the bot restarts.',
+        extras={'requirement': 6}
+    )
+    async def giveaway(self, ctx: CustomContext, channel: TextChannel, winners: int, duration: str, *, prize: str):
+        if not 0 < winners < 255:
+            raise Exception('Number of winners out of range.')
+
+        avatar = self.bot.user.avatar or self.bot.user.default_avatar
+        _time_delta = self.bot.convert_duration(duration, allow_any_duration=True)
+        seconds = round(_time_delta.total_seconds())
+        now = utcnow()
+
+        giveaway_embed = Embed(color=Color.blue(), title=prize.capitalize(), timestamp=now)
+        giveaway_embed.set_author(name='Giveaway!', icon_url=avatar)
+        giveaway_embed.set_thumbnail(url=self.bot.guild.icon or avatar)
+        giveaway_embed.set_footer(text=f'{winners} Winner(s)')
+        giveaway_embed.add_field(name='Ends:', value=f'**{format_dt(now + _time_delta, "F")}**', inline=False)
+        giveaway_embed.add_field(name='Hosted By:', value=ctx.author.mention, inline=False)
+
+        message = await channel.send(embed=giveaway_embed)
+        view = GiveawayView(message, winners, seconds, prize)
+        await message.edit(view=view)
+        await view.expire()
 
 
 async def setup(bot: CustomBot):
