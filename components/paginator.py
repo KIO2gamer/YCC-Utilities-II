@@ -1,5 +1,3 @@
-from typing import Union
-
 from discord import (
     ui,
     User,
@@ -15,7 +13,7 @@ from discord import (
 # noinspection PyUnusedLocal,PyUnresolvedReferences
 class Paginator(ui.View):
 
-    def __init__(self, author: Union[User, Member], message: Message, embeds: list[Embed]):
+    def __init__(self, author: User | Member | None, message: Message, embeds: list[Embed]):
         super().__init__(timeout=120)
         self.author = author
         self.message = message
@@ -65,3 +63,9 @@ class Paginator(ui.View):
             await self.message.edit(view=None)
         except HTTPException:
             pass
+
+
+class UnAuthoredPaginator(Paginator):
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        return True

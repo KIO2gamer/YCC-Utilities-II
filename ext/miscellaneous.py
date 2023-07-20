@@ -302,6 +302,19 @@ class MiscellaneousCommands(commands.Cog):
         await message.edit(view=view)
         await view.expire()
 
+        await self.bot.good_embed(ctx, f'*Giveaway started in {channel.mention}!*')
+
+    @commands.command(
+        name='sync-bans',
+        aliases=[],
+        description='Syncs the list of banned user IDs from the server that is cached by the bot.',
+        extras={'requirement': 3}
+    )
+    async def sync_bans(self, ctx: CustomContext):
+        async with ctx.typing():
+            self.bot.bans = [entry.user.id async for entry in self.bot.guild.bans(limit=None)]
+        await self.bot.good_embed(ctx, f'*Synced `{len(self.bot.bans)}` bans.*')
+
 
 async def setup(bot: CustomBot):
     await bot.add_cog(MiscellaneousCommands(bot))
