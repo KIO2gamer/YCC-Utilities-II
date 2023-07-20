@@ -1,3 +1,4 @@
+import logging
 from time import time
 from datetime import timedelta
 
@@ -5,6 +6,7 @@ from discord.ext import commands, tasks
 from discord.abc import GuildChannel
 from discord.utils import utcnow, format_dt
 from discord import (
+    HTTPException,
     VoiceState,
     Message,
     Member,
@@ -18,6 +20,9 @@ from core.context import CustomContext
 
 
 class UserStatistics(commands.Cog):
+
+    ACTIVE_ROLE_LOOKBACK = 2419200
+    ACTIVE_ROLE_LIMIT = 10
 
     MOD_STAT_TYPES = {'dm': 'DMs', 'warn': 'Warns', 'kick': 'Kicks',
                       'mute': 'Mutes', 'ban': 'Bans', 'channel_ban': 'Channel Bans',
@@ -35,10 +40,45 @@ class UserStatistics(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def handle_stats(self) -> None:
+        await self.bot.wait_until_ready()
+
         _msg, _vc = [_ for _ in self.msg_stats], [_ for _ in self.vc_stats]
         self.msg_stats, self.vc_stats = [], []
         await self.bot.mongo_db.dump_msg_stats(_msg)
         await self.bot.mongo_db.dump_vc_stats(_vc)
+
+        active_role = await self.bot.metadata.get_role('active')
+        if not active_role:
+            return
+
+        msg_stats = await self.bot.mongo_db.get_msg_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
+        vc_stats = await self.bot.mongo_db.get_vc_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
+        sorted_stats = self.get_sorted_stats(msg_stats, vc_stats)
+
+        _l = self.ACTIVE_ROLE_LIMIT
+
+        top_10_msg_users, top_10_vc_users = list(sorted_stats.get('umc', {})), list(sorted_stats.get('uvt', {}))
+        top_10_msg_users = top_10_msg_users if len(top_10_msg_users) < _l else top_10_msg_users[:_l]
+        top_10_vc_users = top_10_vc_users if len(top_10_vc_users) < _l else top_10_vc_users[:_l]
+
+        top_users: set[int] = set(top_10_msg_users + top_10_vc_users)
+        role_users: list[int] = [user.id for user in active_role.members]
+
+        user_ids_in = [user_id for user_id in top_users if user_id not in role_users]
+        user_ids_out = [user_id for user_id in role_users if user_id not in top_users]
+
+        for user_id in user_ids_in:
+            try:
+                member = self.bot.guild.get_member(user_id) or await self.bot.guild.fetch_member(user_id)
+                await member.add_roles(active_role)
+            except HTTPException as error:
+                logging.error(f'Failed to add active role to member (ID: {user_id}) - {error}')
+        for user_id in user_ids_out:
+            try:
+                member = self.bot.guild.get_member(user_id) or await self.bot.guild.fetch_member(user_id)
+                await member.remove_roles(active_role)
+            except HTTPException as error:
+                logging.error(f'Failed to remove active role from member (ID: {user_id}) - {error}')
 
     def _on_join_vc(self, member: Member, after: VoiceState) -> None:
         vc_dict = {
@@ -178,6 +218,7 @@ class UserStatistics(commands.Cog):
         description='View your own activity stats or check the stats of another user/channel.',
         extras={'requirement': 0}
     )
+    @commands.cooldown(1, 15)
     async def stats(self, ctx: CustomContext, target: GuildChannel | User = None, lookback: str = '28d'):
         async with ctx.typing():
             target = target or ctx.author
