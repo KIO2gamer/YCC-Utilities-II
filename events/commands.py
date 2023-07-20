@@ -31,7 +31,7 @@ class CustomCommandEvents(commands.Cog):
                     await message.delete()
                     await message.channel.send(faq.get('response'))
                 except HTTPException as error:
-                    logging.warning(f'Error while responding to FAQ - {error}')
+                    logging.error(f'Error while responding to FAQ - {error}')
                 return
 
         for custom in await self.bot.mongo_db.fetch_commands('custom'):
