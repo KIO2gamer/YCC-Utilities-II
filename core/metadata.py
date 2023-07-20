@@ -75,7 +75,7 @@ class MetaData(dict):
 
     @property
     def welcome_msg(self) -> str:
-        return self.get('welcome_msg', 'Welcome to the server <member>!')
+        return self.get('welcome_msg') or 'Welcome to the server <member>!'
 
     @property
     def appeal_url(self) -> Optional[str]:
