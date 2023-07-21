@@ -57,7 +57,7 @@ class AsyncRequestsClient:
                 logging.info(f'We are being rate limited. Retrying in {retry_after} seconds...')
                 await asyncio.sleep(retry_after)
 
-                return await self.request(method, url, retries, **kwargs)
+                return await self.request(method, url, retries=retries, **kwargs)
 
             elif response.status == 400:
                 cls = BadRequest
