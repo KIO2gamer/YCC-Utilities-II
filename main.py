@@ -3,7 +3,6 @@ import asyncio
 import logging
 from time import time
 from datetime import timedelta
-from typing import Optional
 from traceback import format_exception as format_error
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,6 +36,7 @@ try:
     from core.help import CustomHelpCommand
     from core.metadata import MetaData
     from components.traceback import TracebackView
+    from api.mee6 import MEE6LevelsAPIClient
 
 except ModuleNotFoundError as unknown_import:
     logging.fatal(f'Missing required dependencies - {unknown_import}.')
@@ -64,9 +64,10 @@ class CustomBot(commands.Bot):
         )
 
         self.guild_id: int = config.GUILD_ID
-        self.guild: Optional[Guild] = None
-        self.mongo_db: Optional[MongoDBClient] = None
-        self.metadata: Optional[MetaData] = None
+        self.guild: Guild | None = None
+        self.mongo_db: MongoDBClient | None = None
+        self.mee6: MEE6LevelsAPIClient | None = None
+        self.metadata: MetaData | None = None
         self.bans: list[int] = []
         self.perm_duration: int = 2 ** 32 - 1
 
@@ -121,7 +122,7 @@ class CustomBot(commands.Bot):
     async def bad_embed(self, destination: Messageable, message: str, view: View = MISSING) -> Message:
         return await self.basic_embed(destination, message, Color.red(), view=view)
 
-    async def user_to_member(self, user: User, raise_exception: bool = False) -> Optional[Member]:
+    async def user_to_member(self, user: User, raise_exception: bool = False) -> Member | None:
         try:
             return self.guild.get_member(user.id) or await self.guild.fetch_member(user.id)
         except HTTPException as error:
@@ -313,7 +314,9 @@ class CustomBot(commands.Bot):
     def run_bot(self) -> None:
 
         async def _run_bot():
-            async with self, MongoDBClient(self, config.MONGO) as self.mongo_db:
+            async with self, \
+                    MongoDBClient(self, config.MONGO) as self.mongo_db, \
+                    MEE6LevelsAPIClient() as self.mee6:
                 for folder in ('./ext', './events'):
                     for file in os.listdir(folder):
                         if file.endswith('.py'):
