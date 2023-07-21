@@ -71,12 +71,13 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='editcoins',
         aliases=[],
-        description='Edits the coin balance of a member. Balance cannot go below zero.',
+        description='Edits the coin balance of a member. Balances cannot go below zero.',
         extras={'requirement': 3}
     )
-    async def editcoins(self, ctx: CustomContext, member: Member, token_delta: int):
-        result = await self.bot.mongo_db.edit_user_tokens(member.id, token_delta)
-        new_balance = result.get('tokens')
+    async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):
+        async with ctx.typing():
+            result = await self.bot.mongo_db.edit_user_tokens(member.id, token_change)
+            new_balance = result.get('tokens')
         await self.bot.good_embed(ctx, f'*Edited {member.mention}\'s balance to `{new_balance:,}` coins.*')
 
 
