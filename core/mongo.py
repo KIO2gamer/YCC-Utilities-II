@@ -18,6 +18,7 @@ from motor.motor_asyncio import (
 from core.modlog import ModLogEntry
 from core.errors import ModLogNotFound
 from core.metadata import MetaData
+from resources.tokens import token_table
 
 
 class MongoDBClient:
@@ -201,3 +202,29 @@ class MongoDBClient:
     async def delete_role(self, role_type: ROLE_TYPES, **kwargs) -> bool:
         result = await self.__getattribute__(f'{role_type}_roles').delete_one(kwargs, session=self._session)
         return bool(result.deleted_count)
+
+    async def user_tokens_entry(self, user_id: int) -> dict:
+        data = await self.tokens.find_one({'user_id': user_id}, session=self._session)
+
+        if data is None:
+            known_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
+            tokens = 0
+            for i in range(1, known_level + 1):
+                tokens += token_table.get(i, 9)
+            data = {'user_id': user_id, 'tokens': tokens, 'known_level': known_level}
+            await self.tokens.insert_one(data, session=self._session)
+
+        return data
+
+    async def edit_user_tokens(self, user_id: int, token_delta: int) -> dict:
+        data = await self.user_tokens_entry(user_id)
+        data['tokens'] = max(data.get('tokens', 0) + token_delta, 0)
+        await self.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self._session)
+        return data
+
+    async def update_user_level(self, user_id: int) -> dict:
+        data = await self.user_tokens_entry(user_id)
+        data['known_level'] += 1
+        data['tokens'] += token_table[data['known_level']]
+        await self.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self._session)
+        return data
