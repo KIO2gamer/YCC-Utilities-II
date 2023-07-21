@@ -41,12 +41,23 @@ class EventLogger(commands.Cog):
     def avatar(self) -> Asset:
         return self.bot.user.avatar or self.bot.user.default_avatar
 
+    @property
+    def ignored_channels(self) -> list[int]:
+        return self.bot.metadata.event_ignored_channels
+
+    @property
+    def ignored_roles(self) -> list[int]:
+        return self.bot.metadata.event_ignored_roles
+
     @commands.Cog.listener()
     async def on_message_edit(self, before: Message, after: Message):
         logger = await self._log_channel()
         if not logger:
             return
         elif not before.guild or before.guild.id != self.bot.guild_id or before.author == self.bot.user:
+            return
+        elif before.channel.id in self.ignored_channels or \
+                [role for role in before.author.roles if role.id in self.ignored_roles]:
             return
 
         edited_msg_embed = Embed(
@@ -68,6 +79,9 @@ class EventLogger(commands.Cog):
             return
         elif not message.guild or message.guild.id != self.bot.guild_id or message.author == self.bot.user:
             return
+        elif message.channel.id in self.ignored_channels or \
+                [role for role in message.author.roles if role.id in self.ignored_roles]:
+            return
 
         deleted_msg_embed = Embed(
             color=Color.red(),
@@ -88,8 +102,16 @@ class EventLogger(commands.Cog):
             return
         elif not payload or not payload[0].guild or payload[0].guild.id != self.bot.guild_id:
             return
+        elif payload[0].channel.id in self.ignored_channels:
+            return
 
-        channel = payload[0].channel
+        for message in payload:
+            if [role for role in message.author.roles if role.id in self.ignored_roles]:
+                payload.remove(message)
+
+        if not payload:
+            return
+
         fields = [EmbedField(
             name=f'Message {payload.index(message) + 1}',
             text=f'**Sent by {message.author.mention} at {format_dt(message.created_at, "F")}**\n'
@@ -99,7 +121,7 @@ class EventLogger(commands.Cog):
         embeds = self.bot.fields_to_embeds(
             fields,
             color=Color.red(),
-            description=f'**{len(payload)} Messages Deleted (In {channel.mention})**',
+            description=f'**{len(payload)} Messages Deleted (In {payload[0].channel.mention})**',
             author_name='Bulk Message Deletion',
             author_icon=self.avatar)
 
@@ -133,6 +155,8 @@ class EventLogger(commands.Cog):
             return
         elif before.guild != self.bot.guild:
             return
+        elif before.id in self.ignored_roles:
+            return
         elif before.name == after.name and before.color == after.color:
             return
 
@@ -156,6 +180,8 @@ class EventLogger(commands.Cog):
         if not logger:
             return
         elif role.guild != self.bot.guild:
+            return
+        elif role.id in self.ignored_roles:
             return
 
         deleted_role_embed = Embed(
@@ -195,6 +221,8 @@ class EventLogger(commands.Cog):
             return
         elif channel.guild != self.bot.guild:
             return
+        elif channel.id in self.ignored_channels:
+            return
 
         deleted_channel_embed = Embed(
             color=Color.red(),
@@ -232,6 +260,8 @@ class EventLogger(commands.Cog):
         if not logger:
             return
         elif before.guild != self.bot.guild:
+            return
+        elif [role for role in before.roles + after.roles if role.id in self.ignored_roles]:
             return
 
         if before.nick != after.nick:
@@ -283,6 +313,8 @@ class EventLogger(commands.Cog):
             return
         elif member.guild != self.bot.guild:
             return
+        elif [role for role in member.roles if role.id in self.ignored_roles]:
+            return
 
         left_member_embed = Embed(
             color=Color.red(),
@@ -304,6 +336,8 @@ class EventLogger(commands.Cog):
         if not logger:
             return
         elif guild != self.bot.guild:
+            return
+        elif isinstance(user, Member) and [role for role in user.roles if role.id in self.ignored_roles]:
             return
 
         banned_embed = Embed(
@@ -345,6 +379,8 @@ class EventLogger(commands.Cog):
         if not logger:
             return
         elif member.guild != self.bot.guild:
+            return
+        elif [role for role in member.roles if role.id in self.ignored_roles]:
             return
 
         if not before.channel:
