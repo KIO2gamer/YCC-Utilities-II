@@ -50,7 +50,7 @@ class AsyncRequestsClient:
             if 200 <= response.status < 300:
                 return data
 
-            elif response.status == 429 and retries < 6:
+            elif response.status == 429 and retries < 5:
                 retries += 1
                 retry_after = 2 ** retries
 
