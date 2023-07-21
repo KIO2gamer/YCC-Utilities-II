@@ -75,6 +75,7 @@ class MongoDBClient:
             raise SystemExit()
 
         self.database: AsyncIOMotorDatabase = self.client.database
+
         self.metadata: AsyncIOMotorCollection = self.database.metadata
         self.modlogs: AsyncIOMotorCollection = self.database.modlogs
         self.msg_stats: AsyncIOMotorCollection = self.database.msg_stats
@@ -83,6 +84,7 @@ class MongoDBClient:
         self.custom_commands: AsyncIOMotorCollection = self.database.custom_commands
         self.persistent_roles: AsyncIOMotorCollection = self.database.persistent_roles
         self.custom_roles: AsyncIOMotorCollection = self.database.custom_roles
+        self.tokens: AsyncIOMotorCollection = self.database.tokens
 
         self._session = None
 
