@@ -9,10 +9,15 @@ from discord import (
 from main import CustomBot
 
 from core.context import CustomContext
-from api.errors import HTTPException
+from api.errors import (
+    HTTPException,
+    TooManyRequests
+)
 
 
 class TokenHandler(commands.Cog):
+
+    RATE_LIMITED = 'Failed to fetch MEE6 stats for {0} due to rate limits. It is possible that they\'re not ranked yet.'
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -43,17 +48,22 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='coins',
         aliases=['tokens'],
-        description='Displays the member\'s current YT coins count as well as their known MEE6 level.',
+        description='Displays the member\'s current Cafe coins count as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
-    async def tokens(self, ctx: CustomContext, member: Member = None):
+    async def coins(self, ctx: CustomContext, member: Member = None):
         async with ctx.typing():
             member = member or ctx.author
-            data = await self.bot.mongo_db.user_tokens_entry(member.id)
+            if member.bot:
+                raise Exception(f'{member.mention} is a bot.')
+            try:
+                data = await self.bot.mongo_db.user_tokens_entry(member.id)
+            except TooManyRequests:
+                raise Exception(self.RATE_LIMITED.format(member.mention))
 
             tokens_embed = Embed(color=Color.blue(), description=member.mention)
 
-            tokens_embed.set_author(name='YouTube Coins', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
+            tokens_embed.set_author(name='Cafe Coins', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
             tokens_embed.set_thumbnail(url=member.avatar or member.default_avatar)
             tokens_embed.set_footer(text='Earn more coins by levelling up!')
 
@@ -76,8 +86,15 @@ class TokenHandler(commands.Cog):
     )
     async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):
         async with ctx.typing():
-            result = await self.bot.mongo_db.edit_user_tokens(member.id, token_change)
+            if member.bot:
+                raise Exception(f'{member.mention} is a bot.')
+            try:
+                result = await self.bot.mongo_db.edit_user_tokens(member.id, token_change)
+            except TooManyRequests:
+                raise Exception(self.RATE_LIMITED.format(member.mention))
+
             new_balance = result.get('tokens')
+
         await self.bot.good_embed(ctx, f'*Edited {member.mention}\'s balance to `{new_balance:,}` coins.*')
 
 
