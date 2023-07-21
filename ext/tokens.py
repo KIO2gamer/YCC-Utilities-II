@@ -1,3 +1,5 @@
+import logging
+
 from discord.ext import commands, tasks
 from discord import (
     Message,
@@ -7,7 +9,6 @@ from discord import (
 )
 
 from main import CustomBot
-
 from core.context import CustomContext
 from api.errors import TooManyRequests
 
@@ -37,6 +38,7 @@ class TokenHandler(commands.Cog):
             try:
                 current_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
             except TooManyRequests:
+                logging.info(self.RATE_LIMITED.format(f'<@{user_id}>'))
                 break
             if current_level != (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level'):
                 await self.bot.mongo_db.update_user_level(user_id)
@@ -45,7 +47,7 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='coins',
         aliases=['tokens'],
-        description='Displays the member\'s current Café Coins count as well as their known MEE6 level.',
+        description='Displays the member\'s current Café Coins balance as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
     async def coins(self, ctx: CustomContext, member: Member = None):
