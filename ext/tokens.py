@@ -9,10 +9,7 @@ from discord import (
 from main import CustomBot
 
 from core.context import CustomContext
-from api.errors import (
-    HTTPException,
-    TooManyRequests
-)
+from api.errors import TooManyRequests
 
 
 class TokenHandler(commands.Cog):
@@ -39,7 +36,7 @@ class TokenHandler(commands.Cog):
         for user_id in self.recent_user_ids:
             try:
                 current_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
-            except HTTPException:
+            except TooManyRequests:
                 break
             if current_level != (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level'):
                 await self.bot.mongo_db.update_user_level(user_id)
