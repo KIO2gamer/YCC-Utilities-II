@@ -31,7 +31,7 @@ class TokenHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):
-        if message.author.id not in self.recent_user_ids:
+        if message.author.id not in self.recent_user_ids and not message.author.bot:
             self.recent_user_ids.append(message.author.id)
 
     @tasks.loop(minutes=15)
@@ -48,7 +48,7 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='coins',
         aliases=['tokens'],
-        description='Displays the member\'s current Cafe coins count as well as their known MEE6 level.',
+        description='Displays the member\'s current Café Coins count as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
     async def coins(self, ctx: CustomContext, member: Member = None):
@@ -63,7 +63,7 @@ class TokenHandler(commands.Cog):
 
             tokens_embed = Embed(color=Color.blue(), description=member.mention)
 
-            tokens_embed.set_author(name='Cafe Coins', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
+            tokens_embed.set_author(name='Café Coins', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
             tokens_embed.set_thumbnail(url=member.avatar or member.default_avatar)
             tokens_embed.set_footer(text='Earn more coins by levelling up!')
 
@@ -81,7 +81,7 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='editcoins',
         aliases=[],
-        description='Edits the coin balance of a member. Balances cannot go below zero.',
+        description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
         extras={'requirement': 3}
     )
     async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):
