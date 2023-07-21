@@ -32,17 +32,20 @@ class TokenHandler(commands.Cog):
         if message.author.id not in self.recent_user_ids and not message.author.bot:
             self.recent_user_ids.append(message.author.id)
 
-    @tasks.loop(minutes=15)
+    @tasks.loop(minutes=30)
     async def update_user_tokens(self):
         for user_id in self.recent_user_ids:
+            self.recent_user_ids.remove(user_id)
+
             try:
                 current_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
+                known_level = (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level')
             except TooManyRequests:
                 logging.info(self.RATE_LIMITED.format(f'<@{user_id}>'))
                 break
-            if current_level != (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level'):
+
+            for _ in range(current_level - known_level):
                 await self.bot.mongo_db.update_user_level(user_id)
-            self.recent_user_ids.remove(user_id)
 
     @commands.command(
         name='coins',
@@ -50,6 +53,7 @@ class TokenHandler(commands.Cog):
         description='Displays the member\'s current Café Coins balance as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
+    @commands.cooldown(1, 60)
     async def coins(self, ctx: CustomContext, member: Member = None):
         async with ctx.typing():
             member = member or ctx.author
@@ -83,6 +87,7 @@ class TokenHandler(commands.Cog):
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
         extras={'requirement': 3}
     )
+    @commands.cooldown(1, 60)
     async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):
         async with ctx.typing():
             if member.bot:
