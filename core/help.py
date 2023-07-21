@@ -15,6 +15,7 @@ class CustomHelpCommand(commands.HelpCommand):
         'MiscellaneousCommands': 'Miscellaneous Commands',
         'ModerationCommands': 'Moderation Commands',
         'ModLogsCommands': 'Modlogs Commands',
+        'TokenHandler': 'Currency Commands',
         'UserStatistics': 'User Statistics',
     }
 
