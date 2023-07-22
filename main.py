@@ -19,6 +19,8 @@ try:
         HTTPException,
         LoginFailure,
         PrivilegedIntentsRequired,
+        Activity,
+        ActivityType,
         User,
         Guild,
         Member,
@@ -291,6 +293,11 @@ class CustomBot(commands.Bot):
 
             await self.mongo_db.update_modlog(_case_id=modlog.id, active=False)
 
+    @tasks.loop(count=1)
+    async def init_status(self) -> None:
+        await self.wait_until_ready()
+        await self.change_presence(activity=Activity(type=ActivityType.listening, name=self.metadata.activity))
+
     async def setup_hook(self) -> None:
         logging.info(f'Logging in as {self.user.name} (ID: {self.user.id})...')
 
@@ -310,6 +317,7 @@ class CustomBot(commands.Bot):
         self.metadata = await self.mongo_db.get_metadata()
 
         self.modlogs_tasks.start()
+        self.init_status.start()
 
     def run_bot(self) -> None:
 
