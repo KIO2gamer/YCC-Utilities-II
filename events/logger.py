@@ -54,7 +54,8 @@ class EventLogger(commands.Cog):
         logger = await self._log_channel()
         if not logger:
             return
-        elif not before.guild or before.guild.id != self.bot.guild_id or before.author == self.bot.user:
+        elif not before.guild or before.guild.id != self.bot.guild_id or \
+                before.author == self.bot.user or before.content == after.content:
             return
         elif before.channel.id in self.ignored_channels or \
                 [role for role in before.author.roles if role.id in self.ignored_roles]:
