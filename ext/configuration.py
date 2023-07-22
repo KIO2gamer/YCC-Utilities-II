@@ -1,11 +1,11 @@
-from typing import Literal
+from typing import Literal, get_args
 from urllib.parse import urlparse
 
 from discord.ext import commands
 from discord.abc import GuildChannel
 from discord import (
-    ActivityType,
-    Activity,
+    Embed,
+    Color,
     User,
     Role
 )
@@ -18,13 +18,73 @@ class ConfigurationCommands(commands.Cog):
 
     CHANNEL_TYPES = Literal['appeal', 'trivia', 'suggest', 'general', 'logging']
     ROLE_TYPES = Literal['admin', 'bot', 'senior', 'hmod', 'smod', 'rmod', 'tmod', 'helper', 'trivia', 'active']
-    ROLE_TYPES_MAP = {'bot': 'Bot Admin', 'senior': 'Senior Staff', 'hmod': 'Head Moderator',
-                      'smod': 'Senior Moderator', 'rmod': 'Moderator', 'tmod': 'Trainee Moderator'}
+    ROLE_TYPES_MAP = {'bot': 'Bot Admin', 'senior': 'Senior Staff', 'hmod': 'Head Mod',
+                      'smod': 'Senior Mod', 'rmod': 'Moderator', 'tmod': 'Trainee Mod'}
     BLACKLIST_TYPES = Literal['suggest', 'trivia', 'appeal']
     IGNORED_TYPES = Literal['event', 'auto_mod']
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
+
+    @commands.command(
+        name='config',
+        aliases=[],
+        description='Displays the bot\'s current configuration settings.',
+        extras={'requirement': 9}
+    )
+    async def config(self, ctx: CustomContext):
+        async with ctx.typing():
+
+            avatar = self.bot.user.avatar or self.bot.user.default_avatar
+            config_embed = Embed(color=Color.blue(), title=self.bot.guild.name)
+            config_embed.set_author(name='Configuration Settings', icon_url=avatar)
+            config_embed.set_thumbnail(url=self.bot.guild.icon or avatar)
+            config_embed.set_footer(text='Note: Some features pertaining to these settings are currently unavailable.')
+
+            metadata = self.bot.metadata
+
+            staff_roles = {self.ROLE_TYPES_MAP.get(name, name.capitalize()): await metadata.get_role(name)
+                           for name in get_args(self.ROLE_TYPES)[:-2]}
+            other_roles = {self.ROLE_TYPES_MAP.get(name, name.capitalize()): await metadata.get_role(name)
+                           for name in get_args(self.ROLE_TYPES)[-2:]}
+            channels = {name.capitalize(): await metadata.get_channel(name)
+                        for name in get_args(self.CHANNEL_TYPES)}
+
+            config_embed.add_field(
+                name='Staff Roles:',
+                value='\n'.join([f'> **`[{8 - list(staff_roles).index(r)}]` {r}:** '
+                                 f'{staff_roles[r].mention if staff_roles[r] else "**`None`**"}' for r in staff_roles]),
+                inline=False)
+            config_embed.add_field(
+                name='Other Roles:',
+                value='\n'.join([f'> **{r}**: '
+                                 f'{other_roles[r].mention if other_roles[r] else "**`None`**"}' for r in other_roles]),
+                inline=False)
+            config_embed.add_field(
+                name='Channels:',
+                value='\n'.join([f'> **{c}:** '
+                                 f'{channels[c].mention if channels[c] else "**`None`**"}' for c in channels]),
+                inline=False)
+
+            config_embed.add_field(
+                name='Ignored By Auto-Mod:',
+                value=' '.join(([f'<#{c}>' for c in metadata.auto_mod_ignored_channels] +
+                               [f'<@&{r}>' for r in metadata.auto_mod_ignored_roles]) or ['**`None`**']),
+                inline=False)
+            config_embed.add_field(
+                name='Ignored By Logger:',
+                value=' '.join(([f'<#{c}>' for c in metadata.event_ignored_channels] +
+                               [f'<@&{r}>' for r in metadata.event_ignored_roles]) or ['**`None`**']),
+                inline=False)
+
+            config_embed.add_field(
+                name='Miscellaneous:',
+                value=f'> **Welcome Message: `{metadata.welcome_msg}`**\n'
+                      f'> **Appeal URL: `{metadata.appeal_url}`**\n'
+                      f'> **Bot Status: `{metadata.activity}`**',
+                inline=False)
+
+        await ctx.send(embed=config_embed)
 
     @commands.command(
         name='config-channel',
@@ -109,8 +169,8 @@ class ConfigurationCommands(commands.Cog):
         extras={'requirement': 9}
     )
     async def set_status(self, ctx: CustomContext, *, status: str):
-        await self.bot.change_presence(activity=Activity(type=ActivityType.listening, name=status))
         await self.bot.mongo_db.update_metadata(activity=status)
+        await self.bot.init_status()
         await self.bot.good_embed(ctx, f'*Set status as `{status}`!*')
 
     @commands.command(
