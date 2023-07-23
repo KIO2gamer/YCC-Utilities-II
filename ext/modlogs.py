@@ -176,7 +176,7 @@ class ModLogsCommands(commands.Cog):
         name='reason',
         aliases=['r'],
         description='Edits the reason of an existing modlog.',
-        extras={'requirement': 2}
+        extras={'requirement': 3}
     )
     async def reason(self, ctx: CustomContext, case_id: int, *, reason: str):
         modlog = await self.bot.mongo_db.update_modlog(_case_id=case_id, _deleted=False, reason=reason)

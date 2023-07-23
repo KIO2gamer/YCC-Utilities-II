@@ -85,7 +85,7 @@ class TokenHandler(commands.Cog):
         name='editcoins',
         aliases=[],
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
-        extras={'requirement': 3}
+        extras={'requirement': 4}
     )
     @commands.cooldown(1, 60)
     async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):

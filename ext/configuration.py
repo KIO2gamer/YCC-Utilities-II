@@ -188,7 +188,7 @@ class ConfigurationCommands(commands.Cog):
         name='set-status',
         aliases=[],
         description='Edits the bot\'s status to `Listening to <status>`.',
-        extras={'requirement': 9}
+        extras={'requirement': 8}
     )
     async def set_status(self, ctx: CustomContext, *, status: str):
         await self.bot.mongo_db.update_metadata(activity=status)
@@ -199,7 +199,7 @@ class ConfigurationCommands(commands.Cog):
         name='set-welcome',
         aliases=[],
         description='Edits the welcome message sent when a member joins. Use `<member>` to mention the member.',
-        extras={'requirement': 9}
+        extras={'requirement': 8}
     )
     async def set_welcome(self, ctx: CustomContext, *, message: str):
         await self.bot.mongo_db.update_metadata(welcome_msg=message)
@@ -209,7 +209,7 @@ class ConfigurationCommands(commands.Cog):
         name='set-appeal-url',
         aliases=[],
         description='Edits the ban appeal URL that gets sent to banned users. Use `off` to disable this feature.',
-        extras={'requirement': 9}
+        extras={'requirement': 8}
     )
     async def set_appeal_url(self, ctx: CustomContext, *, url: str):
         if url == 'off':
