@@ -82,11 +82,13 @@ class InformationCommands(commands.Cog):
             value=_none if not member or len(member.roles) <= 1 else
             ' '.join([role.mention for role in member.roles[1:]]), inline=False)
 
-        user_info_embed.add_field(name='Created At:', value=f'<t:{round(user.created_at.timestamp())}:F>')
+        user_info_embed.add_field(name='Created At:', value=format_dt(user.created_at, 'F'))
         user_info_embed.add_field(name='Joined Guild On:', value=format_dt(member.joined_at, 'F') if member else _none)
 
-        perm_level = f'`Level {await self.bot.member_clearance(user)}`' if member else '`None`'
-        user_info_embed.add_field(name='Guild Permission Level:', value=perm_level, inline=False)
+        perm_level_int = await self.bot.member_clearance(user)
+        clearance_str = self.bot.clearance_to_str(perm_level_int)
+        perm_level_str = f'**`Level {perm_level_int}`** **({clearance_str})**' if member else '**`None`**'
+        user_info_embed.add_field(name='Guild Permission Level:', value=perm_level_str, inline=False)
 
         await ctx.send(embed=user_info_embed)
 

@@ -84,6 +84,16 @@ class CustomBot(commands.Bot):
             raise DurationError()
         return td
 
+    def clearance_to_str(self, clearance: int) -> str:
+        if clearance <= 0:
+            return '**`Member`**'
+        elif clearance >= 9:
+            return '**`Owner`**'
+        rs = ('helper', 'tmod', 'rmod', 'smod', 'hmod', 'senior', 'bot', 'admin')
+        clearance_map = {rs.index(r) + 1: self.metadata.get(f'{r}_role') for r in rs}
+        clearance_str = clearance_map.get(clearance)
+        return f'<@&{clearance_str}>' if clearance_str else f'**`None`**'
+
     @staticmethod
     def _new_embed(**kwargs) -> CustomEmbed:
         return CustomEmbed(
@@ -206,9 +216,8 @@ class CustomBot(commands.Bot):
         await message.edit(view=TracebackView(self, message, traceback))
 
     async def send_command_help(self, ctx: CustomContext, command: commands.Command) -> None:
-        requirement = command.extras.get('requirement', 0)
-        # noinspection PyUnresolvedReferences
-        if await self.member_clearance(ctx.author) < requirement:
+        req = command.extras.get('requirement', 0)
+        if await self.member_clearance(ctx.author) < req:
             return
 
         description, aliases, name, params = command.description, command.aliases, command.name, command.clean_params
@@ -217,7 +226,7 @@ class CustomBot(commands.Bot):
         command_help_embed = Embed(
             color=Color.blue(),
             title=f'{self.command_prefix}{name} Command',
-            description=description + f' Requires server permission level `{requirement}` or higher.')
+            description=description + f' Requires {self.clearance_to_str(req)} **`[{req}]`** or higher.')
         command_help_embed.set_author(name='Help Menu', icon_url=self.user.avatar or self.user.default_avatar)
         command_help_embed.set_footer(text=f'Use {self.command_prefix}help to view all commands.')
 
