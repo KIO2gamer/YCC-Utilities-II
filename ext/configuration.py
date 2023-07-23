@@ -1,9 +1,11 @@
 from typing import Literal, get_args
 from urllib.parse import urlparse
+from json import loads
 
 from discord.ext import commands
 from discord.abc import GuildChannel
 from discord import (
+    Message,
     Embed,
     Color,
     User,
@@ -12,6 +14,7 @@ from discord import (
 
 from main import CustomBot
 from core.context import CustomContext
+from components.roles import RoleView
 
 
 class ConfigurationCommands(commands.Cog):
@@ -242,6 +245,51 @@ class ConfigurationCommands(commands.Cog):
             msg = f'*Added {target.mention} to the list of ignored `{ignored_type}` {str_type}.*'
         await self.bot.mongo_db.update_metadata(**{f'{ignored_type}_ignored_{str_type}': id_list})
         await self.bot.good_embed(ctx, msg)
+
+    @commands.command(
+        name='embed',
+        aliases=[],
+        description='Posts an embedded message in the specified channel. You can customise an embedded message '
+                    '**[here](https://discohook.org/)**, copy the JSON data and save it as a `.json` file. '
+                    'This should then be attached to your message whilst invoking the command. '
+                    'This is intended to be used with `rolesetup`. Message content and attachments are not supported.',
+        extras={'requirement': 8}
+    )
+    async def embed(self, ctx: CustomContext, channel: GuildChannel = None):
+        try:
+            json_file = ctx.message.attachments[0]
+        except IndexError:
+            raise Exception('No attached file found.')
+
+        json_data = loads(await json_file.read())
+        try:
+            embeds = [Embed.from_dict(embed) for embed in json_data['embeds']]
+        except KeyError:
+            raise Exception('Unknown/invalid file.')
+
+        if embeds:
+            channel = channel or ctx.channel
+            message = await channel.send(embeds=embeds)
+            await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
+        else:
+            raise Exception(f'Embed list is empty!')
+
+    @commands.command(
+        name='rolesetup',
+        aliases=[],
+        description='Edits an existing message sent by the bot and attaches dynamically-produced role buttons. '
+                    'These buttons can then be pressed by any member to add/remove their respective role.',
+        extras={'requirement': 8}
+    )
+    async def rolesetup(self, ctx: CustomContext, message: Message, roles: commands.Greedy[Role]):
+        if not roles:
+            raise Exception('Please specify one or more valid roles.')
+        elif message.author != self.bot.user:
+            raise Exception('The message must have been sent by me!')
+
+        await message.edit(view=RoleView(roles))
+        await self.bot.mongo_db.add_view(role_ids=[role.id for role in roles], message_id=message.id)
+        await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
 
 
 async def setup(bot: CustomBot):

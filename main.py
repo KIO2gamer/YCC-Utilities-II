@@ -38,6 +38,7 @@ try:
     from core.help import CustomHelpCommand
     from core.metadata import MetaData
     from components.traceback import TracebackView
+    from components.roles import RoleView
     from api.mee6 import MEE6LevelsAPIClient
 
 except ModuleNotFoundError as unknown_import:
@@ -327,6 +328,14 @@ class CustomBot(commands.Bot):
 
         self.modlogs_tasks.start()
         self.init_status.start()
+
+        for view in await self.mongo_db.get_views():
+            roles = [self.guild.get_role(role_id) for role_id in view.get('role_ids', [])]
+            message_id = view.get('message_id')
+            if None in roles:
+                logging.warning(f'Cannot add persistent view to message (ID: {message_id}) due to unknown role IDs')
+                continue
+            self.add_view(RoleView(roles), message_id=message_id)
 
     def run_bot(self) -> None:
 

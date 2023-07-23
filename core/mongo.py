@@ -86,6 +86,7 @@ class MongoDBClient:
         self.persistent_roles: AsyncIOMotorCollection = self.database.persistent_roles
         self.custom_roles: AsyncIOMotorCollection = self.database.custom_roles
         self.tokens: AsyncIOMotorCollection = self.database.tokens
+        self.views: AsyncIOMotorCollection = self.database.views
 
         self._session = None
 
@@ -228,3 +229,10 @@ class MongoDBClient:
         data['tokens'] += token_table[data['known_level']]
         await self.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self._session)
         return data
+
+    async def get_views(self) -> list[dict]:
+        return [view async for view in self.views.find({}, session=self._session)]
+
+    async def add_view(self, **kwargs) -> dict:
+        await self.views.insert_one(kwargs, session=self._session)
+        return kwargs
