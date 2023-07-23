@@ -30,7 +30,7 @@ class ConfigurationCommands(commands.Cog):
         name='config',
         aliases=[],
         description='Displays the bot\'s current configuration settings.',
-        extras={'requirement': 9}
+        extras={'requirement': 3}
     )
     async def config(self, ctx: CustomContext):
         async with ctx.typing():
@@ -114,7 +114,7 @@ class ConfigurationCommands(commands.Cog):
         name='wldomain',
         aliases=[],
         description='Toggles the whitelisting of a URL domain.',
-        extras={'requirement': 4}
+        extras={'requirement': 3}
     )
     async def wldomain(self, ctx: CustomContext, domain: str):
         wl = [_ for _ in self.bot.metadata.domain_wl]
@@ -131,7 +131,7 @@ class ConfigurationCommands(commands.Cog):
         name='bldomain',
         aliases=[],
         description='Toggles the blacklisting of a URL domain.',
-        extras={'requirement': 4}
+        extras={'requirement': 3}
     )
     async def bldomain(self, ctx: CustomContext, domain: str):
         bl = [_ for _ in self.bot.metadata.domain_bl]
@@ -145,10 +145,32 @@ class ConfigurationCommands(commands.Cog):
         await self.bot.good_embed(ctx, msg)
 
     @commands.command(
+        name='domains',
+        aliases=[],
+        description='Lists all whitelisted & blacklisted URL domains. Blacklisted domains may only be posted by staff '
+                    'members. Whitelisted domains may only be posted in auto-mod ignored channels.',
+        extras={'requirement': 3}
+    )
+    async def domains(self, ctx: CustomContext):
+        domains_embed = Embed(color=Color.blue())
+        domains_embed.set_author(name='All Domains', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
+
+        domains_embed.add_field(
+            name='Whitelisted Domains',
+            value=' '.join([f'**`{domain}`**' for domain in self.bot.metadata.domain_wl]),
+            inline=False)
+        domains_embed.add_field(
+            name='Blacklisted Domains',
+            value=' '.join([f'**`{domain}`**' for domain in self.bot.metadata.domain_bl]),
+            inline=False)
+
+        await ctx.send(embed=domains_embed)
+
+    @commands.command(
         name='blacklist',
         aliases=[],
         description='Blacklists a user from one of the bot\'s features (`suggest`, `trivia` or `appeal`).',
-        extras={'requirement': 4}
+        extras={'requirement': 3}
     )
     async def blacklist(self, ctx: CustomContext, blacklist_type: BLACKLIST_TYPES, user: User):
         bl = [_ for _ in self.bot.metadata.__getattribute__(f'{blacklist_type}_bl')]
