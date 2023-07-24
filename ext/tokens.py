@@ -88,12 +88,12 @@ class TokenHandler(commands.Cog):
         extras={'requirement': 4}
     )
     @commands.cooldown(1, 60)
-    async def editcoins(self, ctx: CustomContext, member: Member, token_change: int):
+    async def editcoins(self, ctx: CustomContext, member: Member, coin_change: int):
         async with ctx.typing():
             if member.bot:
                 raise Exception(f'{member.mention} is a bot.')
             try:
-                result = await self.bot.mongo_db.edit_user_tokens(member.id, token_change)
+                result = await self.bot.mongo_db.edit_user_tokens(member.id, coin_change)
             except TooManyRequests:
                 raise Exception(self.RATE_LIMITED.format(member.mention))
 

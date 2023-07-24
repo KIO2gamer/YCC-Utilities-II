@@ -29,6 +29,21 @@ class ConfigurationCommands(commands.Cog):
     def __init__(self, bot: CustomBot):
         self.bot = bot
 
+    @staticmethod
+    async def _parse_embeds(ctx: CustomContext) -> list[Embed]:
+        try:
+            json_file = ctx.message.attachments[0]
+            json_data = loads(await json_file.read())
+            embeds = [Embed.from_dict(embed) for embed in json_data['embeds']]
+        except IndexError:
+            raise Exception('No attached file found.')
+        except KeyError:
+            raise Exception('Unknown/invalid file.')
+
+        if not embeds:
+            raise Exception('Embed list is empty!')
+        return embeds
+
     @commands.command(
         name='config',
         aliases=[],
@@ -256,23 +271,26 @@ class ConfigurationCommands(commands.Cog):
         extras={'requirement': 8}
     )
     async def embed(self, ctx: CustomContext, channel: GuildChannel = None):
-        try:
-            json_file = ctx.message.attachments[0]
-        except IndexError:
-            raise Exception('No attached file found.')
+        embeds = await self._parse_embeds(ctx)
+        channel = channel or ctx.channel
+        message = await channel.send(embeds=embeds)
+        await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
 
-        json_data = loads(await json_file.read())
-        try:
-            embeds = [Embed.from_dict(embed) for embed in json_data['embeds']]
-        except KeyError:
-            raise Exception('Unknown/invalid file.')
+    @commands.command(
+        name='editembed',
+        aliases=[],
+        description='Edits an existing message sent by the bot. '
+                    'Removes any attached embeds and replaces them with new ones specified by the command author. '
+                    'Customise the embedded message the same as with the `embed` command.',
+        extras={'requirement': 8}
+    )
+    async def editembed(self, ctx: CustomContext, message: Message):
+        if message.author != self.bot.user:
+            raise Exception('The message must have been sent by me!')
 
-        if embeds:
-            channel = channel or ctx.channel
-            message = await channel.send(embeds=embeds)
-            await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
-        else:
-            raise Exception(f'Embed list is empty!')
+        embeds = await self._parse_embeds(ctx)
+        await message.edit(embeds=embeds)
+        await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
 
     @commands.command(
         name='rolesetup',
@@ -282,10 +300,10 @@ class ConfigurationCommands(commands.Cog):
         extras={'requirement': 8}
     )
     async def rolesetup(self, ctx: CustomContext, message: Message, roles: commands.Greedy[Role]):
-        if not roles:
-            raise Exception('Please specify one or more valid roles.')
-        elif message.author != self.bot.user:
+        if message.author != self.bot.user:
             raise Exception('The message must have been sent by me!')
+        elif not roles:
+            raise Exception('Please specify one or more valid roles.')
 
         await message.edit(view=RoleView(roles))
         await self.bot.mongo_db.add_view(role_ids=[role.id for role in roles], message_id=message.id)
