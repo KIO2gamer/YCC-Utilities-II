@@ -360,6 +360,7 @@ class CustomBot(commands.Bot):
 
         async def _cleanup():
             self.modlogs_tasks.cancel()
+            self.init_status.cancel()
 
         # noinspection PyUnresolvedReferences
         with asyncio.Runner() as runner:
