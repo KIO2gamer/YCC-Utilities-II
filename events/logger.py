@@ -384,17 +384,17 @@ class EventLogger(commands.Cog):
         elif [role for role in member.roles if role.id in self.ignored_roles]:
             return
 
-        if not before.channel:
+        if not before.channel and after.channel:
             color = Color.green()
             author_name = 'Member Joined VC'
             field_text = after.channel.mention
 
-        elif not after.channel:
+        elif before.channel and not before.channel:
             color = Color.red()
             author_name = 'Member Left VC'
             field_text = before.channel.mention
 
-        elif before.channel != after.channel:
+        elif before.channel and after.channel and before.channel != after.channel:
             color = Color.blue()
             author_name = 'Member Switched VCs'
             field_text = f'{before.channel.mention} **->** {after.channel.mention}'
