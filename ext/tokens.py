@@ -10,12 +10,12 @@ from discord import (
 
 from main import CustomBot
 from core.context import CustomContext
-from api.errors import TooManyRequests
+from api.errors import HTTPException
 
 
 class TokenHandler(commands.Cog):
 
-    RATE_LIMITED = 'Failed to fetch MEE6 stats for {0} due to rate limits. It is possible that they\'re not ranked yet.'
+    MEE6_EXCEPTION = 'Failed to fetch MEE6 stats for {0}. It is possible that they\'re not ranked yet.'
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -40,8 +40,8 @@ class TokenHandler(commands.Cog):
             try:
                 current_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
                 known_level = (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level')
-            except TooManyRequests:
-                logging.info(self.RATE_LIMITED.format(f'<@{user_id}>'))
+            except HTTPException:
+                logging.error(self.MEE6_EXCEPTION.format(f'<@{user_id}>'))
                 break
 
             for _ in range(current_level - known_level):
@@ -61,8 +61,8 @@ class TokenHandler(commands.Cog):
                 raise Exception(f'{member.mention} is a bot.')
             try:
                 data = await self.bot.mongo_db.user_tokens_entry(member.id)
-            except TooManyRequests:
-                raise Exception(self.RATE_LIMITED.format(member.mention))
+            except HTTPException:
+                raise Exception(self.MEE6_EXCEPTION.format(member.mention))
 
             tokens_embed = Embed(color=Color.blue(), description=member.mention)
 
@@ -94,8 +94,8 @@ class TokenHandler(commands.Cog):
                 raise Exception(f'{member.mention} is a bot.')
             try:
                 result = await self.bot.mongo_db.edit_user_tokens(member.id, coin_change)
-            except TooManyRequests:
-                raise Exception(self.RATE_LIMITED.format(member.mention))
+            except HTTPException:
+                raise Exception(self.MEE6_EXCEPTION.format(member.mention))
 
             new_balance = result.get('tokens')
 
