@@ -210,9 +210,13 @@ class CustomBot(commands.Bot):
 
         message = await self.bad_embed(ctx, f'❌ {message}')
 
-        traceback = f'**Full Traceback:**\n```py\n{"".join(format_error(type(error), error, error.__traceback__))}\n```'
-        if len(traceback) > 2000:
-            traceback = '```py' + traceback[1995:]
+        traceback = ''.join(format_error(type(error), error, error.__traceback__))
+        if len(traceback) > 1960:
+            traceback = '\n'.join(traceback[-1960:].split('\n')[1:])
+            note = ' (Last 2,000)'
+        else:
+            note = ''
+        traceback = f'**Traceback{note}:**\n```\n{traceback}\n```'
 
         await message.edit(view=TracebackView(self, message, traceback))
 
