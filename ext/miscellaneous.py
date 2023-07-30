@@ -257,7 +257,7 @@ class MiscellaneousCommands(commands.Cog):
         description='Allows users to edit their own custom role without having the `manage roles` permission.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 30)
+    @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.bot_has_permissions(manage_roles=True)
     async def editcustomrole(self, ctx: CustomContext, new_hex: str, *, new_name: str):
         custom_roles = await self.bot.mongo_db.fetch_roles('custom')

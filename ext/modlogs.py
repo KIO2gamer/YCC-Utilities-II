@@ -91,7 +91,7 @@ class ModLogsCommands(commands.Cog):
         description='Allows members to view their own modlogs history by sending a DM to the command author.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 15)
+    @commands.cooldown(1, 15, commands.BucketType.user)
     async def mylogs(self, ctx: CustomContext):
         try:
             modlogs = await self.bot.mongo_db.search_modlog(user_id=ctx.author.id, deleted=False)

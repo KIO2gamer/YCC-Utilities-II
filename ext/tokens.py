@@ -53,7 +53,7 @@ class TokenHandler(commands.Cog):
         description='Displays the member\'s current Café Coins balance as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 60)
+    @commands.cooldown(1, 60, commands.BucketType.user)
     async def coins(self, ctx: CustomContext, member: Member = None):
         async with ctx.typing():
             member = member or ctx.author
@@ -87,7 +87,7 @@ class TokenHandler(commands.Cog):
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
         extras={'requirement': 4}
     )
-    @commands.cooldown(1, 60)
+    @commands.cooldown(1, 60, commands.BucketType.user)
     async def editcoins(self, ctx: CustomContext, member: Member, coin_change: int):
         async with ctx.typing():
             if member.bot:

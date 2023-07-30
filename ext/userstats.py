@@ -167,7 +167,7 @@ class UserStatistics(commands.Cog):
         description='View the most active users and channels in the server.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 15)
+    @commands.cooldown(1, 15, commands.BucketType.user)
     async def topstats(self, ctx: CustomContext, lookback: str = '28d'):
         async with ctx.typing():
             _time_delta = self.bot.convert_duration(lookback)
@@ -218,7 +218,7 @@ class UserStatistics(commands.Cog):
         description='View your own activity stats or check the stats of another user/channel.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 15)
+    @commands.cooldown(1, 15, commands.BucketType.user)
     async def stats(self, ctx: CustomContext, target: GuildChannel | User = None, lookback: str = '28d'):
         async with ctx.typing():
             target = target or ctx.author

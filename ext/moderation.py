@@ -392,7 +392,7 @@ class ModerationCommands(commands.Cog):
         extras={'requirement': 4}
     )
     @commands.bot_has_permissions(manage_roles=True)
-    @commands.cooldown(1, 15)
+    @commands.cooldown(1, 15, commands.BucketType.user)
     async def lock(self, ctx: CustomContext, c: GuildChannel = None):
         c = c or ctx.channel
         if c in self.locked_channels:
@@ -424,7 +424,7 @@ class ModerationCommands(commands.Cog):
         extras={'requirement': 4}
     )
     @commands.bot_has_permissions(manage_roles=True)
-    @commands.cooldown(1, 15)
+    @commands.cooldown(1, 15, commands.BucketType.user)
     async def unlock(self, ctx: CustomContext, channel: GuildChannel = None):
         channel = channel or ctx.channel
         if channel not in self.locked_channels:
