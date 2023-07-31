@@ -224,6 +224,17 @@ class MongoDBClient:
         await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
         return data
 
+    async def get_bonus_token_roles(self) -> list[dict]:
+        return [entry async for entry in self.database.bonus_token_roles.find({}, session=self.__session)]
+
+    async def add_bonus_token_roles(self, **kwargs) -> dict:
+        await self.database.bonus_token_roles.insert_one(kwargs, session=self.__session)
+        return kwargs
+
+    async def del_bonus_token_roles(self, **kwargs) -> bool:
+        result = await self.database.bonus_token_roles.delete_one(kwargs, session=self.__session)
+        return bool(result.deleted_count)
+
     async def get_views(self) -> list[dict]:
         return [view async for view in self.database.views.find({}, session=self.__session)]
 

@@ -5,11 +5,14 @@ from discord import (
     Message,
     Member,
     Embed,
-    Color
+    Color,
+    Role
 )
 
 from main import CustomBot
+from core.embed import EmbedField
 from core.context import CustomContext
+from components.paginator import Paginator
 from api.errors import HTTPException
 
 
@@ -100,6 +103,48 @@ class TokenHandler(commands.Cog):
             new_balance = result.get('tokens')
 
         await self.bot.good_embed(ctx, f'*Edited {member.mention}\'s balance to `{new_balance:,}` coins.*')
+
+    @commands.command(
+        name='addtokenrole',
+        aliases=[],
+        description='Members with the specified role will receive bonus Café Coins once per week.',
+        extras={'requirement': 4}
+    )
+    async def addtokenrole(self, ctx: CustomContext, role: Role, coin_bonus: int):
+        await self.bot.mongo_db.add_bonus_token_roles(role_id=role.id, bonus=coin_bonus)
+        await self.bot.good_embed(ctx, f'*{role.mention} will now reward `{coin_bonus:,}` bonus Café coins per week.*')
+
+    @commands.command(
+        name='deltokenrole',
+        aliases=[],
+        description='Deletes a weekly bonus Café Coin role assignment.',
+        extras={'requirement': 4}
+    )
+    async def deltokenrole(self, ctx: CustomContext, role: Role):
+        result = await self.bot.mongo_db.del_bonus_token_roles(role_id=role.id)
+        if result is False:
+            raise Exception(f'{role.mention} is not a bonus Café Coin role.')
+        await self.bot.good_embed(ctx, f'*Unassigned {role.mention} as a bonus Café Coin role.*')
+
+    @commands.command(
+        name='tokenroles',
+        aliases=[],
+        description='Lists all bonus Café Coin role assignments.',
+        extras={'requirement': 1}
+    )
+    async def tokenroles(self, ctx: CustomContext):
+        bonus_token_roles = await self.bot.mongo_db.get_bonus_token_roles()
+        if not bonus_token_roles:
+            raise Exception(f'No roles found. Use `{self.bot.command_prefix}addtokenrole` to create one!')
+
+        fields = [EmbedField(
+            name='Bonus Role',
+            text=f'> **Role:** <@&{entry.get("role_id", 0)}>\n> **Bonus: `{entry.get("bonus", 0):,}`**')
+            for entry in bonus_token_roles]
+        embeds = self.bot.fields_to_embeds(fields, title='Bonus Café Coin Roles')
+
+        message = await ctx.send(embed=embeds[0])
+        await message.edit(view=Paginator(ctx.author, message, embeds))
 
 
 async def setup(bot: CustomBot):
