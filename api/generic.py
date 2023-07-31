@@ -43,7 +43,7 @@ class AsyncRequestsClient:
             raise ClientError('`AsyncRequestsClient.request` must be used in an asynchronous context manager.')
 
         async with self.__session.request(method, url, **kwargs) as response:
-            logging.info(f'({response.status}) {method.upper() + "      "[:6 - len(method)]} {url}')
+            logging.info(f'({response.status}) {method.upper() + "      "[:6 - len(method)]} {url} {kwargs}')
 
             data = await json_or_text(response)
 

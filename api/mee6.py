@@ -42,9 +42,6 @@ class MEE6LevelsAPIClient(AsyncRequestsClient):
         return page_data
 
     async def user_data(self, guild_id: int, user_id: int) -> dict:
-        if len(str(user_id)) not in range(18, 20):
-            raise ValueError(f'{user_id} is not a valid Discord user ID')
-
         guild_data = self._guild_data(guild_id)
         user_data = guild_data['users'].get(user_id)
 
