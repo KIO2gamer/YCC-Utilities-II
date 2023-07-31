@@ -23,12 +23,17 @@ class TokenHandler(commands.Cog):
     def __init__(self, bot: CustomBot):
         self.bot = bot
         self.recent_user_ids: list[int] = []
+        self.pending_weekly_rewards: list[dict[str, int]] = []
 
     def cog_load(self) -> None:
         self.update_user_tokens.start()
+        self.assign_weekly_rewards.start()
+        self.reward_weekly_rewards.start()
 
     def cog_unload(self) -> None:
         self.update_user_tokens.stop()
+        self.assign_weekly_rewards.stop()
+        self.reward_weekly_rewards.stop()
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):
@@ -37,6 +42,8 @@ class TokenHandler(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def update_user_tokens(self):
+        await self.bot.wait_until_ready()
+
         for user_id in self.recent_user_ids:
             self.recent_user_ids.remove(user_id)
 
@@ -49,6 +56,45 @@ class TokenHandler(commands.Cog):
 
             for _ in range(current_level - known_level):
                 await self.bot.mongo_db.update_user_level(user_id)
+
+    @tasks.loop(minutes=30)
+    async def reward_weekly_rewards(self):
+        await self.bot.wait_until_ready()
+
+        for entry in self.pending_weekly_rewards:
+            user_id, bonus = entry.get('user_id', 0), entry.get('bonus', 0)
+
+            try:
+                await self.bot.mongo_db.edit_user_tokens(user_id, bonus)
+
+            except HTTPException:
+
+                logging.error(self.MEE6_EXCEPTION.format(user_id))
+                logging.info('Postponing weekly rewards until next task loop...')
+
+                self.pending_weekly_rewards = self.pending_weekly_rewards[self.pending_weekly_rewards.index(entry):]
+                break
+
+        else:
+            self.pending_weekly_rewards = []
+
+    @tasks.loop(hours=168)
+    async def assign_weekly_rewards(self):
+        await self.bot.wait_until_ready()
+
+        bonus_token_roles = await self.bot.mongo_db.get_bonus_token_roles()
+
+        for entry in bonus_token_roles:
+            role_id, bonus = entry.get('role_id', 0), entry.get('bonus', 0)
+
+            role = self.bot.guild.get_role(role_id)
+            if role:
+                for member in role.members:
+                    weekly_reward_entry = {'user_id': member.id, 'bonus': bonus}
+                    self.pending_weekly_rewards.append(weekly_reward_entry)
+
+            else:
+                logging.error(f'Failed to assign weekly coin rewards due to unknown role (ID: {role_id})')
 
     @commands.command(
         name='coins',
@@ -107,7 +153,7 @@ class TokenHandler(commands.Cog):
     @commands.command(
         name='addtokenrole',
         aliases=[],
-        description='Members with the specified role will receive bonus Café Coins once per week.',
+        description='Members with the specified role will begin receiving bonus Café Coins once per week.',
         extras={'requirement': 4}
     )
     async def addtokenrole(self, ctx: CustomContext, role: Role, coin_bonus: int):
