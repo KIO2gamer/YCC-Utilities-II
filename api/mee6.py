@@ -43,17 +43,17 @@ class MEE6LevelsAPIClient(AsyncRequestsClient):
 
     async def user_data(self, guild_id: int, user_id: int) -> dict:
         guild_data = self._guild_data(guild_id)
-        user_data = guild_data['users'].get(user_id)
+        user_data = guild_data['users'].get(user_id, {})
 
-        if user_data is None:
+        if not user_data:
 
             page_count = 0
             while True:
 
                 page_data = await self.leaderboard_page(guild_id, page_count)
-                user_data = next((user for user in page_data if user.get('id') == str(user_id)), None)
+                user_data = next((user for user in page_data if user.get('id') == str(user_id)), {})
 
-                if user_data is not None:
+                if user_data or len(page_data) < self.page_user_limit:
                     guild_data['users'][user_id] = user_data
                     break
 
