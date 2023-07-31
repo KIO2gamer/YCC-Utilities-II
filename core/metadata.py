@@ -1,11 +1,7 @@
-from typing import Optional
 from weakref import ref
 
 from discord.abc import GuildChannel
 from discord import HTTPException, Role
-
-# Metadata contains user-configurable values that control how the bot behaves.
-# This subclass exists simply to help keep our code more coherent later on.
 
 
 class MetaData(dict):
@@ -18,15 +14,19 @@ class MetaData(dict):
     def bot(self):
         return self._bot()
 
-    async def get_channel(self, channel_type: str) -> Optional[GuildChannel]:
-        _id = self.get(channel_type + '_channel', 0)
+    async def get_channel(self, channel_type: str) -> GuildChannel | None:
+        _id = self.get(channel_type + '_channel')
+        if not _id:
+            return
         try:
             return self.bot.guild.get_channel(_id) or await self.bot.guild.fetch_channel(_id)
         except HTTPException:
             return
 
-    async def get_role(self, role_type: str) -> Optional[Role]:
-        _id = self.get(role_type + '_role', 0)
+    async def get_role(self, role_type: str) -> Role | None:
+        _id = self.get(role_type + '_role')
+        if not _id:
+            return
         try:
             _coro = self.bot.guild.fetch_roles
             return self.bot.guild.get_role(_id) or next((role for role in await _coro() if role.id == _id), None)
@@ -70,13 +70,13 @@ class MetaData(dict):
         return self.get('auto_mod_ignored_channels', [])
 
     @property
-    def activity(self) -> Optional[str]:
-        return self.get('activity')
-
-    @property
     def welcome_msg(self) -> str:
         return self.get('welcome_msg') or 'Welcome to the server <member>!'
 
     @property
-    def appeal_url(self) -> Optional[str]:
+    def appeal_url(self) -> str | None:
         return self.get('appeal_url')
+
+    @property
+    def activity(self) -> str | None:
+        return self.get('activity')
