@@ -6,7 +6,7 @@ from api.errors import RESPONSE_DATA
 
 class MEE6LevelsAPIClient(AsyncRequestsClient):
 
-    def __init__(self, cache_duration: int | float = 21600, page_user_limit: int = 1000):
+    def __init__(self, cache_duration: int | float = 43200, page_user_limit: int = 1000):
         super().__init__()
 
         self.cache_duration = cache_duration
