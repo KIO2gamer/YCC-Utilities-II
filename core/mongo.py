@@ -77,55 +77,49 @@ class MongoDBClient:
 
         self.database: AsyncIOMotorDatabase = self.client.database
 
-        self.metadata: AsyncIOMotorCollection = self.database.metadata
-        self.modlogs: AsyncIOMotorCollection = self.database.modlogs
-        self.msg_stats: AsyncIOMotorCollection = self.database.msg_stats
-        self.vc_stats: AsyncIOMotorCollection = self.database.vc_stats
         self.faq_commands: AsyncIOMotorCollection = self.database.faq_commands
         self.custom_commands: AsyncIOMotorCollection = self.database.custom_commands
         self.persistent_roles: AsyncIOMotorCollection = self.database.persistent_roles
         self.custom_roles: AsyncIOMotorCollection = self.database.custom_roles
-        self.tokens: AsyncIOMotorCollection = self.database.tokens
-        self.views: AsyncIOMotorCollection = self.database.views
 
-        self._session = None
+        self.__session: AsyncIOMotorClientSession | None = None
 
     async def __aenter__(self):
         try:
-            self._session: AsyncIOMotorClientSession = await self.client.start_session()
+            self.__session = await self.client.start_session()
         except ServerSelectionTimeoutError:
             logging.fatal('Failed to connect to MongoDB. Please check your config.py file is correct.')
             raise SystemExit()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._session.end_session()
+        await self.__session.end_session()
 
     async def get_metadata(self) -> MetaData:
-        data = await self.metadata.find_one({}, session=self._session)
+        data = await self.database.metadata.find_one({}, session=self.__session)
 
         if data is None:
             data = self.DEFAULT_METADATA
-            await self.metadata.insert_one(data, session=self._session)
+            await self.database.metadata.insert_one(data, session=self.__session)
 
         return MetaData(self.bot, **data)
 
     async def update_metadata(self, **kwargs) -> None:
-        data = await self.metadata.find_one_and_update(
+        data = await self.database.metadata.find_one_and_update(
             {},
             {'$set': kwargs},
             return_document=ReturnDocument.AFTER,
-            session=self._session
+            session=self.__session
         )
         # Edit `CustomBot.metadata` in-place rather than returning a new version
         self.bot.metadata = MetaData(self.bot, **data)
 
     async def new_modlog_id(self) -> int:
-        modlog = await self.modlogs.find_one(sort=[('case_id', DESCENDING)], session=self._session)
+        modlog = await self.database.modlogs.find_one(sort=[('case_id', DESCENDING)], session=self.__session)
         return modlog.get('case_id') + 1 if modlog else 1
 
     async def insert_modlog(self, **kwargs) -> ModLogEntry:
-        await self.modlogs.insert_one(kwargs, session=self._session)
+        await self.database.modlogs.insert_one(kwargs, session=self.__session)
         logging.info(f'New modlog entry created - Case ID: {kwargs.get("case_id")}')
         return ModLogEntry(self.bot, **kwargs)
 
@@ -141,11 +135,11 @@ class MongoDBClient:
             else:
                 update_dict[kwarg] = kwargs[kwarg]
 
-        data = await self.modlogs.find_one_and_update(
+        data = await self.database.modlogs.find_one_and_update(
             search_dict,
             {'$set': update_dict},
             return_document=ReturnDocument.AFTER,
-            session=self._session
+            session=self.__session
         )
 
         if data is None:
@@ -156,7 +150,7 @@ class MongoDBClient:
         return ModLogEntry(self.bot, **data)
 
     async def search_modlog(self, **kwargs) -> list[ModLogEntry]:
-        data = self.modlogs.find(kwargs, session=self._session)
+        data = self.database.modlogs.find(kwargs, session=self.__session)
         modlogs = [ModLogEntry(self.bot, **entry) async for entry in data]
 
         if not modlogs:
@@ -167,45 +161,45 @@ class MongoDBClient:
     async def dump_msg_stats(self, entries: list[dict]):
         if not entries:
             return
-        await self.msg_stats.insert_many(entries, session=self._session)
+        await self.database.msg_stats.insert_many(entries, session=self.__session)
 
     async def get_msg_stats(self, lookback: int | float) -> list[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.msg_stats.find({'created': {'$gt': _m}}, session=self._session)]
+        return [entry async for entry in self.database.msg_stats.find({'created': {'$gt': _m}}, session=self.__session)]
 
     async def dump_vc_stats(self, entries: list[dict]):
         if not entries:
             return
-        await self.vc_stats.insert_many(entries, session=self._session)
+        await self.database.vc_stats.insert_many(entries, session=self.__session)
 
     async def get_vc_stats(self, lookback: int | float) -> list[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.vc_stats.find({'joined': {'$gt': _m}}, session=self._session)]
+        return [entry async for entry in self.database.vc_stats.find({'joined': {'$gt': _m}}, session=self.__session)]
 
     async def fetch_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
-        return [cmd async for cmd in self.__getattribute__(f'{command_type}_commands').find({}, session=self._session)]
+        return [cmd async for cmd in self.__getattribute__(f'{command_type}_commands').find({}, session=self.__session)]
 
     async def insert_command(self, command_type: COMMAND_TYPES, **kwargs) -> dict:
-        await self.__getattribute__(f'{command_type}_commands').insert_one(kwargs, session=self._session)
+        await self.__getattribute__(f'{command_type}_commands').insert_one(kwargs, session=self.__session)
         return kwargs
 
     async def delete_command(self, command_type: COMMAND_TYPES, **kwargs) -> bool:
-        result = await self.__getattribute__(f'{command_type}_commands').delete_one(kwargs, session=self._session)
+        result = await self.__getattribute__(f'{command_type}_commands').delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
 
     async def fetch_roles(self, role_type: ROLE_TYPES) -> list[dict]:
-        return [entry async for entry in self.__getattribute__(f'{role_type}_roles').find({}, session=self._session)]
+        return [entry async for entry in self.__getattribute__(f'{role_type}_roles').find({}, session=self.__session)]
 
     async def insert_role(self, role_type: ROLE_TYPES, **kwargs) -> dict:
-        await self.__getattribute__(f'{role_type}_roles').insert_one(kwargs, session=self._session)
+        await self.__getattribute__(f'{role_type}_roles').insert_one(kwargs, session=self.__session)
         return kwargs
 
     async def delete_role(self, role_type: ROLE_TYPES, **kwargs) -> bool:
-        result = await self.__getattribute__(f'{role_type}_roles').delete_one(kwargs, session=self._session)
+        result = await self.__getattribute__(f'{role_type}_roles').delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
 
     async def user_tokens_entry(self, user_id: int) -> dict:
-        data = await self.tokens.find_one({'user_id': user_id}, session=self._session)
+        data = await self.database.tokens.find_one({'user_id': user_id}, session=self.__session)
 
         if data is None:
             known_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
@@ -213,26 +207,26 @@ class MongoDBClient:
             for i in range(1, known_level + 1):
                 tokens += token_table.get(i, 9)
             data = {'user_id': user_id, 'tokens': tokens, 'known_level': known_level}
-            await self.tokens.insert_one(data, session=self._session)
+            await self.database.tokens.insert_one(data, session=self.__session)
 
         return data
 
     async def edit_user_tokens(self, user_id: int, token_delta: int) -> dict:
         data = await self.user_tokens_entry(user_id)
         data['tokens'] = max(data.get('tokens', 0) + token_delta, 0)
-        await self.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self._session)
+        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
         return data
 
     async def update_user_level(self, user_id: int) -> dict:
         data = await self.user_tokens_entry(user_id)
         data['known_level'] += 1
         data['tokens'] += token_table[data['known_level']]
-        await self.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self._session)
+        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
         return data
 
     async def get_views(self) -> list[dict]:
-        return [view async for view in self.views.find({}, session=self._session)]
+        return [view async for view in self.database.views.find({}, session=self.__session)]
 
     async def add_view(self, **kwargs) -> dict:
-        await self.views.insert_one(kwargs, session=self._session)
+        await self.database.views.insert_one(kwargs, session=self.__session)
         return kwargs
