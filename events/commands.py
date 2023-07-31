@@ -25,8 +25,13 @@ class CustomCommandEvents(commands.Cog):
         elif not content.startswith(prefix) or not await self.bot.member_clearance(message.author):
             return
 
+        content_lower = content.lower()
+
         for faq in await self.bot.mongo_db.fetch_commands('faq'):
-            if content.lower().startswith(f'{prefix}{faq.get("shortcut")}'):
+
+            faq_invoke = prefix + faq.get('shortcut')
+            if content_lower == faq_invoke or content_lower.startswith(faq_invoke + ' '):
+
                 try:
                     await message.delete()
                     await message.channel.send(faq.get('response'))
@@ -35,7 +40,10 @@ class CustomCommandEvents(commands.Cog):
                 return
 
         for custom in await self.bot.mongo_db.fetch_commands('custom'):
-            if content.lower().startswith(f'{prefix}{custom.get("shortcut")}'):
+
+            custom_invoke = prefix + custom.get('shortcut')
+            if content_lower == custom_invoke or content_lower.startswith(custom_invoke + ' '):
+
                 action = custom.get('action')
                 reason = custom.get('reason')
                 duration = custom.get('duration')
