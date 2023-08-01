@@ -183,7 +183,7 @@ class CustomBot(commands.Bot):
 
         elif isinstance(error, commands.MissingRequiredArgument):
             await self.send_command_help(ctx, ctx.command)
-            return
+            return ctx.command.reset_cooldown(ctx)
 
         elif isinstance(error, commands.CommandOnCooldown):
             message = f'Wait `{round(error.retry_after)}s` before doing that again.'
