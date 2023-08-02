@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from discord.ext import commands, tasks
@@ -43,6 +44,7 @@ class TokenHandler(commands.Cog):
     @tasks.loop(minutes=30)
     async def update_user_tokens(self):
         await self.bot.wait_until_ready()
+        await asyncio.sleep(15)
 
         for user_id in self.recent_user_ids:
             self.recent_user_ids.remove(user_id)
@@ -60,6 +62,7 @@ class TokenHandler(commands.Cog):
     @tasks.loop(minutes=30)
     async def reward_weekly_rewards(self):
         await self.bot.wait_until_ready()
+        await asyncio.sleep(15 + 15 * 60)
 
         for entry in self.pending_weekly_rewards:
             user_id, bonus = entry.get('user_id', 0), entry.get('bonus', 0)
@@ -81,6 +84,7 @@ class TokenHandler(commands.Cog):
     @tasks.loop(hours=168)
     async def assign_weekly_rewards(self):
         await self.bot.wait_until_ready()
+        await asyncio.sleep(30)
 
         bonus_token_roles = await self.bot.mongo_db.get_bonus_token_roles()
 
@@ -102,7 +106,7 @@ class TokenHandler(commands.Cog):
         description='Displays the member\'s current Café Coins balance as well as their known MEE6 level.',
         extras={'requirement': 0}
     )
-    @commands.cooldown(1, 60, commands.BucketType.user)
+    @commands.cooldown(1, 30, commands.BucketType.user)
     async def coins(self, ctx: CustomContext, member: Member = None):
         async with ctx.typing():
             member = member or ctx.author
@@ -136,7 +140,7 @@ class TokenHandler(commands.Cog):
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
         extras={'requirement': 4}
     )
-    @commands.cooldown(1, 60, commands.BucketType.user)
+    @commands.cooldown(1, 30, commands.BucketType.user)
     async def editcoins(self, ctx: CustomContext, member: Member, coin_change: int):
         async with ctx.typing():
             if member.bot:

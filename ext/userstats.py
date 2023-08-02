@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from time import time
 from datetime import timedelta
@@ -41,6 +42,7 @@ class UserStatistics(commands.Cog):
     @tasks.loop(minutes=1)
     async def handle_stats(self) -> None:
         await self.bot.wait_until_ready()
+        await asyncio.sleep(45)
 
         _msg, _vc = [_ for _ in self.msg_stats], [_ for _ in self.vc_stats]
         self.msg_stats, self.vc_stats = [], []
