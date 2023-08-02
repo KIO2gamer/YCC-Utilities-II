@@ -1,7 +1,6 @@
 from time import time
 
 from api.generic import AsyncRequestsClient
-from api.errors import RESPONSE_DATA
 
 
 class MEE6LevelsAPIClient(AsyncRequestsClient):
@@ -20,15 +19,15 @@ class MEE6LevelsAPIClient(AsyncRequestsClient):
         self._cache_refresh_time: float = time() + self.cache_duration
 
     def _guild_data(self, guild_id: int) -> dict[str, dict]:
-        data = self._cache.get(guild_id)
-        if data is None:
-            data = self._cache[guild_id] = {'pages': {}, 'users': {}}
-        return data
-
-    async def request(self, method: str, url: str, **kwargs) -> RESPONSE_DATA:
         if self._cache_refresh_time < time():
             self._refresh_cache()
-        return await super().request(method, url, **kwargs)
+
+        data = self._cache.get(guild_id)
+
+        if data is None:
+            data = self._cache[guild_id] = {'pages': {}, 'users': {}}
+
+        return data
 
     async def leaderboard_page(self, guild_id: int, page: int = 0) -> list:
         guild_data = self._guild_data(guild_id)
