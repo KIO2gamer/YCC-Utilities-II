@@ -46,15 +46,23 @@ class TokenHandler(commands.Cog):
         await self.bot.wait_until_ready()
         await asyncio.sleep(15)
 
-        for user_id in self.recent_user_ids:
-            self.recent_user_ids.remove(user_id)
+        user_ids_to_update = [_ for _ in self.recent_user_ids]
+        self.recent_user_ids = []
+
+        for user_id in user_ids_to_update:
 
             try:
                 current_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
                 known_level = (await self.bot.mongo_db.user_tokens_entry(user_id)).get('known_level')
+
             except HTTPException:
-                logging.error(self.MEE6_EXCEPTION.format(f'<@{user_id}>'))
-                break
+                logging.error(self.MEE6_EXCEPTION.format(user_id))
+                logging.info(f'Postponing level-up check for {user_id}...')
+
+                if user_id not in self.recent_user_ids:
+                    self.recent_user_ids.append(user_id)
+
+                continue
 
             for _ in range(current_level - known_level):
                 await self.bot.mongo_db.update_user_level(user_id)
@@ -73,7 +81,7 @@ class TokenHandler(commands.Cog):
             except HTTPException:
 
                 logging.error(self.MEE6_EXCEPTION.format(user_id))
-                logging.info('Postponing weekly rewards until next task loop...')
+                logging.info('Postponing remaining weekly rewards...')
 
                 self.pending_weekly_rewards = self.pending_weekly_rewards[self.pending_weekly_rewards.index(entry):]
                 break
