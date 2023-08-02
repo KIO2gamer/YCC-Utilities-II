@@ -330,8 +330,9 @@ class CustomBot(commands.Bot):
 
         self.metadata = await self.mongo_db.get_metadata()
 
-        self.modlogs_tasks.start()
-        self.init_status.start()
+        for loop in self.modlogs_tasks, self.init_status:
+            loop.add_exception_type(Exception)
+            loop.start()
 
         for view in await self.mongo_db.get_views():
             roles = [self.guild.get_role(role_id) for role_id in view.get('role_ids', [])]

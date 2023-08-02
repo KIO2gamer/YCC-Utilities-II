@@ -25,10 +25,12 @@ class AutoModerator(commands.Cog):
         self.infraction_map: dict[Member, int] = {}
 
     def cog_load(self):
+        self.infraction_cooldown.add_exception_type(Exception)
         self.infraction_cooldown.start()
 
     def cog_unload(self):
-        self.infraction_cooldown.stop()
+        self.infraction_cooldown.cancel()
+        self.infraction_cooldown.clear_exception_types()
 
     @tasks.loop(minutes=1)
     async def infraction_cooldown(self):

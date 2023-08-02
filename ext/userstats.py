@@ -34,10 +34,12 @@ class UserStatistics(commands.Cog):
         self.msg_stats, self.vc_stats, self.pending_vc_stats = [], [], []
 
     def cog_load(self) -> None:
+        self.handle_stats.add_exception_type(Exception)
         self.handle_stats.start()
 
     def cog_unload(self) -> None:
-        self.handle_stats.stop()
+        self.handle_stats.cancel()
+        self.handle_stats.clear_exception_types()
 
     @tasks.loop(minutes=1)
     async def handle_stats(self) -> None:

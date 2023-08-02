@@ -27,14 +27,14 @@ class TokenHandler(commands.Cog):
         self.pending_weekly_rewards: list[dict[str, int]] = []
 
     def cog_load(self) -> None:
-        self.update_user_tokens.start()
-        self.assign_weekly_rewards.start()
-        self.reward_weekly_rewards.start()
+        for loop in self.update_user_tokens, self.assign_weekly_rewards, self.reward_weekly_rewards:
+            loop.add_exception_type(Exception)
+            loop.start()
 
     def cog_unload(self) -> None:
-        self.update_user_tokens.stop()
-        self.assign_weekly_rewards.stop()
-        self.reward_weekly_rewards.stop()
+        for loop in self.update_user_tokens, self.assign_weekly_rewards, self.reward_weekly_rewards:
+            loop.cancel()
+            loop.clear_exception_types()
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):
