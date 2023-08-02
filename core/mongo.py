@@ -220,7 +220,7 @@ class MongoDBClient:
     async def update_user_level(self, user_id: int) -> dict:
         data = await self.user_tokens_entry(user_id)
         data['known_level'] += 1
-        data['tokens'] += token_table[data['known_level']]
+        data['tokens'] += token_table.get(data['known_level'], 9)
         await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
         return data
 
