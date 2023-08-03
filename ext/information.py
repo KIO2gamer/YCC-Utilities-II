@@ -114,7 +114,7 @@ class InformationCommands(commands.Cog):
         guild_info_embed.set_footer(text=f'Guild ID: {guild.id}')
 
         guild_info_embed.add_field(name='Owner:', value=guild.owner.mention if guild.owner else '**`None`**')
-        guild_info_embed.add_field(name='Member Count:', value=f'**{len(guild.members)}**', inline=True)
+        guild_info_embed.add_field(name='Member Count:', value=f'**{guild.member_count or 0:,}**', inline=True)
         guild_info_embed.add_field(name='Bot Count:', value=f'**{len([m for m in guild.members if m.bot])}**')
         guild_info_embed.add_field(name='Text Channels:', value=f'**{len(guild.text_channels)}**')
         guild_info_embed.add_field(name='Voice Channels:', value=f'**{len(guild.voice_channels)}**')
