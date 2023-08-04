@@ -11,7 +11,6 @@ from pymongo.errors import (
 from motor.motor_asyncio import (
     AsyncIOMotorClient,
     AsyncIOMotorDatabase,
-    AsyncIOMotorCollection,
     AsyncIOMotorClientSession
 )
 
@@ -76,11 +75,6 @@ class MongoDBClient:
             raise SystemExit()
 
         self.database: AsyncIOMotorDatabase = self.client.database
-
-        self.faq_commands: AsyncIOMotorCollection = self.database.faq_commands
-        self.custom_commands: AsyncIOMotorCollection = self.database.custom_commands
-        self.persistent_roles: AsyncIOMotorCollection = self.database.persistent_roles
-        self.custom_roles: AsyncIOMotorCollection = self.database.custom_roles
 
         self.__session: AsyncIOMotorClientSession | None = None
 
@@ -177,25 +171,25 @@ class MongoDBClient:
         return [entry async for entry in self.database.vc_stats.find({'joined': {'$gt': _m}}, session=self.__session)]
 
     async def fetch_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
-        return [cmd async for cmd in self.__getattribute__(f'{command_type}_commands').find({}, session=self.__session)]
+        return [cmd async for cmd in self.database[f'{command_type}_commands'].find({}, session=self.__session)]
 
     async def insert_command(self, command_type: COMMAND_TYPES, **kwargs) -> dict:
-        await self.__getattribute__(f'{command_type}_commands').insert_one(kwargs, session=self.__session)
+        await self.database[f'{command_type}_commands'].insert_one(kwargs, session=self.__session)
         return kwargs
 
     async def delete_command(self, command_type: COMMAND_TYPES, **kwargs) -> bool:
-        result = await self.__getattribute__(f'{command_type}_commands').delete_one(kwargs, session=self.__session)
+        result = await self.database[f'{command_type}_commands'].delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
 
     async def fetch_roles(self, role_type: ROLE_TYPES) -> list[dict]:
-        return [entry async for entry in self.__getattribute__(f'{role_type}_roles').find({}, session=self.__session)]
+        return [entry async for entry in self.database[f'{role_type}_roles'].find({}, session=self.__session)]
 
     async def insert_role(self, role_type: ROLE_TYPES, **kwargs) -> dict:
-        await self.__getattribute__(f'{role_type}_roles').insert_one(kwargs, session=self.__session)
+        await self.database[f'{role_type}_roles'].insert_one(kwargs, session=self.__session)
         return kwargs
 
     async def delete_role(self, role_type: ROLE_TYPES, **kwargs) -> bool:
-        result = await self.__getattribute__(f'{role_type}_roles').delete_one(kwargs, session=self.__session)
+        result = await self.database[f'{role_type}_roles'].delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
 
     async def user_tokens_entry(self, user_id: int) -> dict:
