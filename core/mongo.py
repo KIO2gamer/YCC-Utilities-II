@@ -200,7 +200,7 @@ class MongoDBClient:
             tokens = 0
             for i in range(1, known_level + 1):
                 tokens += token_table.get(i, 9)
-            data = {'user_id': user_id, 'tokens': tokens, 'known_level': known_level}
+            data = {'user_id': user_id, 'tokens': tokens, 'known_level': known_level, 'bought_items': []}
             await self.database.tokens.insert_one(data, session=self.__session)
 
         return data

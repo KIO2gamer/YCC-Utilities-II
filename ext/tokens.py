@@ -137,7 +137,7 @@ class TokenHandler(commands.Cog):
                 inline=False)
             tokens_embed.add_field(
                 name='MEE6 Level:',
-                value=f'> <:chat_box:862204558780137482> **`{data.get("known_level", 0):,}`**',
+                value=f'> <:YTcomments:715773844496842763> **`{data.get("known_level", 0):,}`**',
                 inline=False)
 
         await ctx.send(embed=tokens_embed)
