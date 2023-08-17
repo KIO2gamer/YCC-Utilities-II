@@ -143,6 +143,44 @@ class TokenHandler(commands.Cog):
         await ctx.send(embed=tokens_embed)
 
     @commands.command(
+        name='shop',
+        aliases=[],
+        description='View all items currently available for purchase using Café Coins.',
+        extras={'requirement': 9}
+    )
+    @commands.cooldown(1, 30, commands.BucketType.user)
+    async def shop(self, ctx: CustomContext):
+        shop_items = await self.bot.mongo_db.get_shop()
+        if not shop_items:
+            raise Exception('Shop currently unavailable!')
+
+        avatar = self.bot.user.avatar or self.bot.user.default_avatar
+        prefix = self.bot.command_prefix
+
+        fields = [shop_item.to_embed_field() for shop_item in shop_items]
+        embeds = self.bot.fields_to_embeds(
+            fields,
+            author_name='Café Shop',
+            author_icon=avatar,
+            description=f'**Use `{prefix}buy <Item ID>` to buy items with Café Coins!**'
+        )
+
+        message = await ctx.send(embed=embeds[0])
+        await message.edit(view=Paginator(ctx.author, message, embeds))
+
+    @commands.command(
+        name='buy',
+        aliases=[],
+        description='Buy an item with Café Coins! Remember to provide the ID of the item you want to buy.',
+        extras={'requirement': 9}
+    )
+    async def buy(self, ctx: CustomContext, item_id: str):
+        shop_item = await self.bot.mongo_db.get_shop_item(item_id)
+        if not shop_item:
+            raise Exception('Item not found.')
+        await shop_item.redeem(ctx, ctx.author)
+
+    @commands.command(
         name='editcoins',
         aliases=[],
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
