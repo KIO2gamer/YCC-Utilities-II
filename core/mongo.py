@@ -18,6 +18,7 @@ from core.modlog import ModLogEntry
 from core.errors import ModLogNotFound
 from core.metadata import MetaData
 from resources.tokens import token_table
+from core.shop import SHOP_ITEM, item_constructor as i_c
 
 
 class MongoDBClient:
@@ -170,6 +171,12 @@ class MongoDBClient:
         _m = time() - lookback
         return [entry async for entry in self.database.vc_stats.find({'joined': {'$gt': _m}}, session=self.__session)]
 
+    async def purge_old_stats(self, lookback: int | float) -> int:
+        _m = time() - lookback
+        result_1 = await self.database.msg_stats.delete_many({'created': {'$lt': _m}}, session=self.__session)
+        result_2 = await self.database.vc_stats.delete_many({'joined': {'$lt': _m}}, session=self.__session)
+        return result_1.deleted_count + result_2.deleted_count
+
     async def fetch_commands(self, command_type: COMMAND_TYPES) -> list[dict]:
         return [cmd async for cmd in self.database[f'{command_type}_commands'].find({}, session=self.__session)]
 
@@ -211,6 +218,12 @@ class MongoDBClient:
         await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
         return data
 
+    async def edit_user_items(self, user_id: int, items: list[dict]) -> dict:
+        data = await self.user_tokens_entry(user_id)
+        data['bought_items'] = items
+        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
+        return data
+
     async def update_user_level(self, user_id: int) -> dict:
         data = await self.user_tokens_entry(user_id)
         data['known_level'] += 1
@@ -228,6 +241,12 @@ class MongoDBClient:
     async def del_bonus_token_roles(self, **kwargs) -> bool:
         result = await self.database.bonus_token_roles.delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
+
+    async def get_shop(self) -> list[SHOP_ITEM]:
+        return [i_c(self.bot, **item) async for item in self.database.shop.find({}, session=self.__session)]
+
+    async def get_shop_item(self, uiid: str) -> SHOP_ITEM | None:
+        return next((item for item in await self.get_shop() if item.uiid == uiid), None)
 
     async def get_views(self) -> list[dict]:
         return [view async for view in self.database.views.find({}, session=self.__session)]

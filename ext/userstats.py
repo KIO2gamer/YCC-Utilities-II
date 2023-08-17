@@ -35,12 +35,14 @@ class UserStatistics(commands.Cog):
         self.msg_stats, self.vc_stats, self.pending_vc_stats = [], [], []
 
     def cog_load(self) -> None:
-        self.handle_stats.add_exception_type(Exception)
-        self.handle_stats.start()
+        for loop in self.handle_stats, self.purge_old_stats:
+            loop.add_exception_type(Exception)
+            loop.start()
 
     def cog_unload(self) -> None:
-        self.handle_stats.cancel()
-        self.handle_stats.clear_exception_types()
+        for loop in self.handle_stats, self.purge_old_stats:
+            loop.cancel()
+            loop.clear_exception_types()
 
     @tasks.loop(minutes=1)
     async def handle_stats(self) -> None:
@@ -84,6 +86,14 @@ class UserStatistics(commands.Cog):
                 await member.remove_roles(active_role)
             except HTTPException as error:
                 logging.error(f'Failed to remove active role from member (ID: {user_id}) - {error}')
+
+    @tasks.loop(hours=1)
+    async def purge_old_stats(self) -> None:
+        await self.bot.wait_until_ready()
+
+        result = await self.bot.mongo_db.purge_old_stats(self.ACTIVE_ROLE_LOOKBACK)
+
+        logging.info(f'Purged {result} documents of old user statistics.')
 
     def _on_join_vc(self, member: Member, after: VoiceState) -> None:
         vc_dict = {
@@ -178,6 +188,10 @@ class UserStatistics(commands.Cog):
             _time_delta = self.bot.convert_duration(lookback)
             seconds = _time_delta.total_seconds()
 
+            if seconds > self.ACTIVE_ROLE_LOOKBACK:
+                _time_delta = self.bot.convert_duration('28d')
+                seconds = _time_delta.total_seconds()
+
             msg_stats = await self.bot.mongo_db.get_msg_stats(seconds)
             vc_stats = await self.bot.mongo_db.get_vc_stats(seconds)
 
@@ -215,7 +229,7 @@ class UserStatistics(commands.Cog):
                 value='\n'.join([f'> <#{c}>**: `{timedelta(seconds=round(cvt[c]))}`**' for c in list(cvt)[:5]]) or nd,
                 inline=False)
 
-        await ctx.send(embed=topstats_embed)
+        await ctx.send(ctx.author.mention, embed=topstats_embed)
 
     @commands.command(
         name='stats',
@@ -230,6 +244,10 @@ class UserStatistics(commands.Cog):
 
             _time_delta = self.bot.convert_duration(lookback)
             seconds = _time_delta.total_seconds()
+
+            if seconds > self.ACTIVE_ROLE_LOOKBACK:
+                _time_delta = self.bot.convert_duration(lookback)
+                seconds = _time_delta.total_seconds()
 
             msg_stats = await self.bot.mongo_db.get_msg_stats(seconds)
             vc_stats = await self.bot.mongo_db.get_vc_stats(seconds)
@@ -268,7 +286,7 @@ class UserStatistics(commands.Cog):
                 value=f'> **`{timedelta(seconds=round(v_time))}`**',
                 inline=False)
 
-        await ctx.send(embed=stats_embed)
+        await ctx.send(ctx.author.mention, embed=stats_embed)
 
     @commands.command(
         name='modstats',
