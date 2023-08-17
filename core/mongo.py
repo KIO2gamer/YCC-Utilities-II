@@ -1,6 +1,6 @@
 import logging
 from time import time
-from typing import Literal
+from typing import Literal, AsyncIterator
 
 from certifi import where
 from pymongo import ReturnDocument, DESCENDING
@@ -158,18 +158,18 @@ class MongoDBClient:
             return
         await self.database.msg_stats.insert_many(entries, session=self.__session)
 
-    async def get_msg_stats(self, lookback: int | float) -> list[dict]:
+    def get_msg_stats(self, lookback: int | float) -> AsyncIterator[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.database.msg_stats.find({'created': {'$gt': _m}}, session=self.__session)]
+        return self.database.msg_stats.find({'created': {'$gt': _m}}, session=self.__session)
 
     async def dump_vc_stats(self, entries: list[dict]):
         if not entries:
             return
         await self.database.vc_stats.insert_many(entries, session=self.__session)
 
-    async def get_vc_stats(self, lookback: int | float) -> list[dict]:
+    def get_vc_stats(self, lookback: int | float) -> AsyncIterator[dict]:
         _m = time() - lookback
-        return [entry async for entry in self.database.vc_stats.find({'joined': {'$gt': _m}}, session=self.__session)]
+        return self.database.vc_stats.find({'joined': {'$gt': _m}}, session=self.__session)
 
     async def purge_old_stats(self, lookback: int | float) -> int:
         _m = time() - lookback
@@ -248,8 +248,8 @@ class MongoDBClient:
     async def get_shop_item(self, uiid: str) -> SHOP_ITEM | None:
         return next((item for item in await self.get_shop() if item.uiid == uiid), None)
 
-    async def get_views(self) -> list[dict]:
-        return [view async for view in self.database.views.find({}, session=self.__session)]
+    def get_views(self) -> AsyncIterator[dict]:
+        return self.database.views.find({}, session=self.__session)
 
     async def add_view(self, **kwargs) -> dict:
         await self.database.views.insert_one(kwargs, session=self.__session)

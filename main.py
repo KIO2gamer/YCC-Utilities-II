@@ -334,7 +334,7 @@ class CustomBot(commands.Bot):
             loop.add_exception_type(Exception)
             loop.start()
 
-        for view in await self.mongo_db.get_views():
+        async for view in self.mongo_db.get_views():
             roles = [self.guild.get_role(role_id) for role_id in view.get('role_ids', [])]
             message_id = view.get('message_id')
             if None in roles:

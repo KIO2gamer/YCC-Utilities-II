@@ -2,6 +2,7 @@ import asyncio
 import logging
 from time import time
 from datetime import timedelta
+from typing import AsyncIterator
 
 from discord.ext import commands, tasks
 from discord.abc import GuildChannel
@@ -58,9 +59,9 @@ class UserStatistics(commands.Cog):
         if not active_role:
             return
 
-        msg_stats = await self.bot.mongo_db.get_msg_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
-        vc_stats = await self.bot.mongo_db.get_vc_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
-        sorted_stats = self.get_sorted_stats(msg_stats, vc_stats)
+        msg_stats = self.bot.mongo_db.get_msg_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
+        vc_stats = self.bot.mongo_db.get_vc_stats(lookback=self.ACTIVE_ROLE_LOOKBACK)
+        sorted_stats = await self.get_sorted_stats(msg_stats, vc_stats)
 
         _l = self.ACTIVE_ROLE_LIMIT
 
@@ -141,10 +142,10 @@ class UserStatistics(commands.Cog):
         self.msg_stats.append(msg_dict)
 
     @staticmethod
-    def get_sorted_stats(msg_stats: list[dict], vc_stats: list[dict]) -> dict[str, dict]:
+    async def get_sorted_stats(msg_stats: AsyncIterator[dict], vc_stats: AsyncIterator[dict]) -> dict[str, dict]:
         umc, cmc, uvt, cvt = {}, {}, {}, {}
 
-        for entry in msg_stats:
+        async for entry in msg_stats:
             user = entry.get('user_id')
             channel = entry.get('channel_id')
             try:
@@ -156,7 +157,7 @@ class UserStatistics(commands.Cog):
             except KeyError:
                 cmc[channel] = 1
 
-        for entry in vc_stats:
+        async for entry in vc_stats:
             user = entry.get('user_id')
             channel = entry.get('channel_id')
             vc_td = entry.get('left', 0) - entry.get('joined', 0)
@@ -192,10 +193,10 @@ class UserStatistics(commands.Cog):
                 _time_delta = self.bot.convert_duration('28d')
                 seconds = _time_delta.total_seconds()
 
-            msg_stats = await self.bot.mongo_db.get_msg_stats(seconds)
-            vc_stats = await self.bot.mongo_db.get_vc_stats(seconds)
+            msg_stats = self.bot.mongo_db.get_msg_stats(seconds)
+            vc_stats = self.bot.mongo_db.get_vc_stats(seconds)
 
-            sorted_stats = self.get_sorted_stats(msg_stats, vc_stats)
+            sorted_stats = await self.get_sorted_stats(msg_stats, vc_stats)
 
             umc = sorted_stats.get('umc', {})
             cmc = sorted_stats.get('cmc', {})
@@ -249,10 +250,10 @@ class UserStatistics(commands.Cog):
                 _time_delta = self.bot.convert_duration(lookback)
                 seconds = _time_delta.total_seconds()
 
-            msg_stats = await self.bot.mongo_db.get_msg_stats(seconds)
-            vc_stats = await self.bot.mongo_db.get_vc_stats(seconds)
+            msg_stats = self.bot.mongo_db.get_msg_stats(seconds)
+            vc_stats = self.bot.mongo_db.get_vc_stats(seconds)
 
-            sorted_stats = self.get_sorted_stats(msg_stats, vc_stats)
+            sorted_stats = await self.get_sorted_stats(msg_stats, vc_stats)
 
             mc = sorted_stats.get('cmc' if isinstance(target, GuildChannel) else 'umc', {})
             vt = sorted_stats.get('cvt' if isinstance(target, GuildChannel) else 'uvt', {})
