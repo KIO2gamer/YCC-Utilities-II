@@ -18,6 +18,7 @@ from discord import (
 
 from main import CustomBot
 from core.context import CustomContext
+from core.errors import ModLogNotFound
 
 
 class UserStatistics(commands.Cog):
@@ -283,8 +284,11 @@ class UserStatistics(commands.Cog):
             seconds = _time_delta.total_seconds()
             now = utcnow()
 
-            modlogs = await self.bot.mongo_db.search_modlog(mod_id=user.id)
-            modlogs = [modlog for modlog in modlogs if modlog.created > now.timestamp() - seconds]
+            try:
+                modlogs = await self.bot.mongo_db.search_modlog(mod_id=user.id)
+                modlogs = [modlog for modlog in modlogs if modlog.created > now.timestamp() - seconds]
+            except ModLogNotFound:
+                modlogs = []
 
             avatar = self.bot.user.avatar
             since_dt = now - _time_delta
