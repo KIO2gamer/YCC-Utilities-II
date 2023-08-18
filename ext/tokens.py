@@ -112,7 +112,7 @@ class TokenHandler(commands.Cog):
         name='coins',
         aliases=['tokens'],
         description='Displays the member\'s current Café Coins balance as well as their known MEE6 level.',
-        extras={'requirement': 0}
+        extras={'requirement': 9}
     )
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def coins(self, ctx: CustomContext, member: Member = None):
@@ -184,7 +184,7 @@ class TokenHandler(commands.Cog):
         name='editcoins',
         aliases=[],
         description='Edits the Café Coins balance of a member. Balances cannot go below zero.',
-        extras={'requirement': 4}
+        extras={'requirement': 9}
     )
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def editcoins(self, ctx: CustomContext, member: Member, coin_change: int):
@@ -204,7 +204,7 @@ class TokenHandler(commands.Cog):
         name='addtokenrole',
         aliases=[],
         description='Members with the specified role will begin receiving bonus Café Coins once per week.',
-        extras={'requirement': 4}
+        extras={'requirement': 9}
     )
     async def addtokenrole(self, ctx: CustomContext, role: Role, coin_bonus: int):
         await self.bot.mongo_db.add_bonus_token_roles(role_id=role.id, bonus=coin_bonus)
@@ -214,7 +214,7 @@ class TokenHandler(commands.Cog):
         name='deltokenrole',
         aliases=[],
         description='Deletes a weekly bonus Café Coin role assignment.',
-        extras={'requirement': 4}
+        extras={'requirement': 9}
     )
     async def deltokenrole(self, ctx: CustomContext, role: Role):
         result = await self.bot.mongo_db.del_bonus_token_roles(role_id=role.id)
@@ -226,7 +226,7 @@ class TokenHandler(commands.Cog):
         name='tokenroles',
         aliases=[],
         description='Lists all bonus Café Coin role assignments.',
-        extras={'requirement': 1}
+        extras={'requirement': 9}
     )
     async def tokenroles(self, ctx: CustomContext):
         bonus_token_roles = await self.bot.mongo_db.get_bonus_token_roles()
