@@ -309,6 +309,16 @@ class ConfigurationCommands(commands.Cog):
         await self.bot.mongo_db.add_view(role_ids=[role.id for role in roles], message_id=message.id)
         await self.bot.good_embed(ctx, f'*Success! [Jump To Message]({message.jump_url})*')
 
+    @commands.command(
+        name='close',
+        aliases=[],
+        description='Closes the bot\'s connection with Discord and exits the process.',
+        extras={'requirement': 9}
+    )
+    async def close(self, ctx: CustomContext):
+        await self.bot.good_embed(ctx, '*Done!*')
+        await self.bot.close()
+
 
 async def setup(bot: CustomBot):
     await bot.add_cog(ConfigurationCommands(bot))
