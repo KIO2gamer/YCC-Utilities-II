@@ -9,7 +9,8 @@ from discord import (
     Embed,
     Color,
     User,
-    Role
+    Role,
+    File
 )
 
 from main import CustomBot
@@ -318,6 +319,15 @@ class ConfigurationCommands(commands.Cog):
     async def close(self, ctx: CustomContext):
         await self.bot.good_embed(ctx, '*Done!*')
         await self.bot.close()
+
+    @commands.command(
+        name='nohup',
+        aliases=[],
+        description='Sends the bot\'s logs as a `.out` file.',
+        extras={'requirement': 9}
+    )
+    async def nohup(self, ctx: CustomContext):
+        await ctx.send(file=File('nohup.out'))
 
 
 async def setup(bot: CustomBot):
