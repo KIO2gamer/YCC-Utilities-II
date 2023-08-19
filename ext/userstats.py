@@ -45,7 +45,7 @@ class UserStatistics(commands.Cog):
             loop.cancel()
             loop.clear_exception_types()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def handle_stats(self) -> None:
         await self.bot.wait_until_ready()
         await asyncio.sleep(45)
