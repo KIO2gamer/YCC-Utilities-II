@@ -1,10 +1,13 @@
 import logging
 from copy import copy
+from datetime import timedelta
 
 from discord.ext import commands
 from discord import (
     HTTPException,
-    Message
+    Message,
+    Embed,
+    Color
 )
 
 from main import CustomBot
@@ -41,24 +44,40 @@ class CustomCommandEvents(commands.Cog):
 
         for custom in await self.bot.mongo_db.fetch_commands('custom'):
 
-            custom_invoke = prefix + custom.get('shortcut')
+            custom_name = custom.get('shortcut', '')
+            custom_invoke = prefix + custom_name
             if content_lower == custom_invoke or content_lower.startswith(custom_invoke + ' '):
 
-                action = custom.get('action')
-                reason = custom.get('reason')
-                duration = custom.get('duration')
-                duration = f'{duration}s' if duration else ''
+                action = custom.get('action', '')
+                reason = custom.get('reason', '')
+                duration = custom.get('duration', 0)
+                duration_str = f'{duration}s' if duration else ''
 
                 message_copy = copy(message)
                 try:
                     user = content.split(' ')[1]
-                    message_copy.content = f'{prefix}{action} {user} {duration} {reason}'
+                    message_copy.content = f'{prefix}{action} {user} {duration_str} {reason}'
                 except IndexError:
-                    message_copy.content = f'{prefix}{action}'
+                    help_embed = Embed(
+                        color=Color.blue(),
+                        title=f'{prefix}{custom_name} Command',
+                        description=f'This is a user-created custom moderation command. '
+                                    f'{action.capitalize()}s the specified user/member '
+                                    f'{"for the pre-set duration" if duration_str else ""} '
+                                    f'and creates a new entry in their modlogs history.')
+                    help_embed.set_author(name='Help Menu', icon_url=self.bot.user.avatar)
+                    help_embed.set_footer(text=f'Use {self.bot.command_prefix}help to view all commands.')
+
+                    help_embed.add_field(name='Reason:', value=f'`{reason}`', inline=False)
+                    if duration_str:
+                        help_embed.add_field(name='Duration:', value=f'`{timedelta(seconds=duration)}`', inline=False)
+                    help_embed.add_field(name='Usage:', value=f'`{prefix}{custom_name} <user>`', inline=False)
+                    help_embed.add_field(name='Aliases:', value='`None`', inline=False)
+
+                    return await message.channel.send(embed=help_embed)
 
                 ctx = await self.bot.get_context(message_copy, cls=CustomContext)
-                await self.bot.invoke(ctx)
-                return
+                return await self.bot.invoke(ctx)
 
 
 async def setup(bot: CustomBot):
