@@ -3,7 +3,7 @@ from asyncio import sleep
 from datetime import timedelta
 
 from discord.ext import commands
-from discord.utils import format_dt
+from discord.utils import format_dt, utcnow
 from discord import (
     HTTPException,
     Message,
@@ -156,6 +156,35 @@ class InformationCommands(commands.Cog):
         translation_embed.add_field(name='Translated Message:', value=translation.text, inline=False)
 
         await ctx.send(embed=translation_embed)
+
+    @commands.command(
+        name='stafflist',
+        aliases=[],
+        description='Sends an embedded message with a list of staff members.',
+        extras={'requirement': 1}
+    )
+    async def stafflist(self, ctx: CustomContext):
+        avatar = self.bot.user.avatar or self.bot.user.default_avatar
+
+        staff_list = Embed(color=Color.blue(), title=self.bot.guild, description=f'**{format_dt(utcnow(), "D")}**')
+        staff_list.set_author(name='Staff Member List', icon_url=avatar)
+        staff_list.set_footer(text='Scroll up for introductions • DM ModMail to get in contact with us!')
+
+        for role_name in 'admin', 'senior', 'hmod', 'smod', 'rmod', 'tmod', 'helper':
+            role = await self.bot.metadata.get_role(role_name)
+            if role:
+                staff_list.add_field(
+                    name=role,
+                    value=' '.join([m.mention for m in role.members if not m.bot]),
+                    inline=False
+                )
+
+        try:
+            await ctx.message.delete()
+        except HTTPException:
+            pass
+
+        await ctx.send(embed=staff_list)
 
     @commands.command(
         name='afk',
