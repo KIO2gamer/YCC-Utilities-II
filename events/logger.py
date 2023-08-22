@@ -389,7 +389,7 @@ class EventLogger(commands.Cog):
             author_name = 'Member Joined VC'
             field_text = after.channel.mention
 
-        elif before.channel and not before.channel:
+        elif before.channel and not after.channel:
             color = Color.red()
             author_name = 'Member Left VC'
             field_text = before.channel.mention
