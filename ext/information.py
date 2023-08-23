@@ -175,7 +175,7 @@ class InformationCommands(commands.Cog):
             if role:
                 staff_list.add_field(
                     name=role,
-                    value=' '.join([m.mention for m in role.members if not m.bot]),
+                    value=' '.join([m.mention for m in role.members if not m.bot] or ['`None`']),
                     inline=False
                 )
 
