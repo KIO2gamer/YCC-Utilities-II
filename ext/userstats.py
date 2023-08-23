@@ -79,14 +79,15 @@ class UserStatistics(commands.Cog):
             try:
                 member = self.bot.guild.get_member(user_id) or await self.bot.guild.fetch_member(user_id)
                 await member.add_roles(active_role)
-            except HTTPException as error:
-                logging.error(f'Failed to add active role to member (ID: {user_id}) - {error}')
+            except HTTPException:
+                pass
+
         for user_id in user_ids_out:
             try:
                 member = self.bot.guild.get_member(user_id) or await self.bot.guild.fetch_member(user_id)
                 await member.remove_roles(active_role)
-            except HTTPException as error:
-                logging.error(f'Failed to remove active role from member (ID: {user_id}) - {error}')
+            except HTTPException:
+                pass
 
     @tasks.loop(hours=1)
     async def purge_old_stats(self) -> None:
