@@ -59,6 +59,7 @@ class ModLogsCommands(commands.Cog):
         if not filtered_modlogs:
             raise ModLogNotFound()
 
+        filtered_modlogs.sort(key=lambda _modlog: _modlog.id)
         return filtered_modlogs
 
     def _modlogs_to_fields(self, modlogs: list[ModLogEntry], **kwargs) -> list[EmbedField]:
