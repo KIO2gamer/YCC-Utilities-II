@@ -35,9 +35,13 @@ class CustomCommandEvents(commands.Cog):
             faq_invoke = prefix + faq.get('shortcut')
             if content_lower == faq_invoke or content_lower.startswith(faq_invoke + ' '):
 
+                response = faq.get('response')
+                for user in message.mentions:
+                    response = f'{user.mention} {response}'
+
                 try:
                     await message.delete()
-                    await message.channel.send(faq.get('response'))
+                    await message.channel.send(response)
                 except HTTPException as error:
                     logging.error(f'Error while responding to FAQ - {error}')
                 return
