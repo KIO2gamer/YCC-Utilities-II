@@ -150,8 +150,10 @@ class InformationCommands(commands.Cog):
         translation = await self._translator.translate(content, dest=target.lower())
 
         translation_embed = Embed(colour=Color.blue(), title='Translation Results', description=link)
-        translation_embed.add_field(name='Detected Language:', value=LANGUAGES[translation.src].capitalize())
-        translation_embed.add_field(name='Target Language:', value=LANGUAGES[translation.dest].capitalize())
+        translation_embed.add_field(
+            name='Detected Language:', value=LANGUAGES.get(translation.src, 'Unknown').capitalize())
+        translation_embed.add_field(
+            name='Target Language:', value=LANGUAGES.get(translation.dest, 'Unknown').capitalize())
         translation_embed.add_field(name='Original Message:', value=content, inline=False)
         translation_embed.add_field(name='Translated Message:', value=translation.text, inline=False)
 
