@@ -41,8 +41,15 @@ class AutoModerator(commands.Cog):
         for member in to_delete:
             self.infraction_map.pop(member)
 
-    @commands.Cog.listener(name='on_message')
-    async def moderate_messages(self, message: Message):
+    @commands.Cog.listener()
+    async def on_message(self, message: Message):
+        await self.moderate_message(message)
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, _: Message, after: Message):
+        await self.moderate_message(after)
+
+    async def moderate_message(self, message: Message):
         author = message.author
         if not message.guild or message.guild.id != self.bot.guild_id or author.bot:
             return
