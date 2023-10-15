@@ -296,7 +296,7 @@ class UserStatistics(commands.Cog):
         description='View the moderations statistics of a user.',
         extras={'requirement': 5}
     )
-    async def modstats(self, ctx: CustomContext, user: User = None, lookback: str = '28d'):
+    async def modstats(self, ctx: CustomContext, user: User = None, lookback: str = '5y'):
         async with ctx.typing():
             user = user or ctx.author
 
