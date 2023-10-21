@@ -9,7 +9,6 @@ from discord.utils import utcnow, MISSING
 from discord import (
     PermissionOverwrite,
     HTTPException,
-    Message,
     Member,
     User,
     Role
@@ -362,28 +361,24 @@ class ModerationCommands(commands.Cog):
     )
     @commands.bot_has_permissions(manage_messages=True)
     async def purge(self, ctx: CustomContext, count: int, user: User = None):
-        if not 0 < count < 101:
-            raise Exception('Specify a message count between 1 and 100.')
+        if count < 1:
+            count = 1
+        elif count > 100:
+            count = 100
 
-        def message_check(_message: Message) -> bool:
-            return not user or _message.author == user
+        await ctx.message.delete()
 
         message_count = 0
         purge_limit = 0
 
-        async with ctx.typing():
-            await ctx.message.delete()
+        async for message in ctx.channel.history(limit=1000):
+            purge_limit += 1
+            if not user or message.author == user:
+                message_count += 1
+            if message_count == count:
+                break
 
-            async for message in ctx.channel.history(limit=1000):
-                purge_limit += 1
-                if not user or message.author == user:
-                    message_count += 1
-                if message_count == count:
-                    break
-
-            purged = await ctx.channel.purge(limit=purge_limit, check=message_check)
-
-        await ctx.send(f'*Purged {len(purged)} messages.*', delete_after=5)
+        await ctx.channel.purge(limit=purge_limit, check=lambda _message: not user or _message.author == user)
 
     @commands.command(
         name='lock',
