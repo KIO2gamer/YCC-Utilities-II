@@ -212,7 +212,7 @@ class ModerationCommands(commands.Cog):
         seconds = _time_delta.total_seconds()
         til = round(utcnow().timestamp() + seconds)
 
-        until_str = f' until <t:{til}:F>' if permanent is False else ''
+        until_str = f' until <t:{til}:F>' if permanent is False else ' permanently'
         message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
 
         appeal_url = self.bot.metadata.appeal_url
