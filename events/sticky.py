@@ -9,7 +9,7 @@ from main import CustomBot
 
 class VideoStickyMessage(commands.Cog):
 
-    CHANNEL_ID = 1046264127481450516
+    CHANNEL_ID = 1014709650890969188
     CONTENT = """
 Try out </compare:1181916274167660624> and </feedback:1182594980271890462> using <@1048092058784649226>!
 """
