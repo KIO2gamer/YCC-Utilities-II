@@ -24,6 +24,8 @@ Try out </compare:1181916274167660624> and </feedback:1182594980271890462> using
 
     @commands.Cog.listener()
     async def on_message(self, message: Message):
+        return
+
         if message.channel.id != self.CHANNEL_ID or message.author == self.bot.user:
             return
 
