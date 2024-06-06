@@ -19,7 +19,7 @@ class CustomSlowmode(commands.Cog):
     def __init__(self, bot: CustomBot) -> None:
         self.bot: CustomBot = bot
 
-        self.duration: int = 43200
+        self.duration: int = 86400
         self.channel_id: int = 1039886236602601512
 
     @commands.Cog.listener(name="on_message")
