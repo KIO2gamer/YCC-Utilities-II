@@ -24,15 +24,16 @@ class CustomSlowmode(commands.Cog):
 
     @commands.Cog.listener(name="on_message")
     async def enforce_slowmode(self, message: Message) -> None:
-        author = message.author
         channel = message.channel
-        clearance = await self.bot.member_clearance(author)
+        author = message.author
 
         if channel.id != self.channel_id:
             return
-        elif clearance:
-            return
         elif author.bot:
+            return
+
+        clearance = await self.bot.member_clearance(author)
+        if clearance:
             return
 
         await channel.set_permissions(author, send_messages=False)
