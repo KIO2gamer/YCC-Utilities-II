@@ -19,7 +19,6 @@ class SpecialRoleEvents(commands.Cog):
     async def handle_deleted_roles(self, role: Role):
         custom_roles = await self.bot.mongo_db.fetch_roles('custom')
         persistent_roles = await self.bot.mongo_db.fetch_roles('persistent')
-        bonus_token_roles = await self.bot.mongo_db.get_bonus_token_roles()
 
         for custom_role in custom_roles:
             role_id = custom_role.get('role_id')
@@ -29,10 +28,6 @@ class SpecialRoleEvents(commands.Cog):
             role_id = persistent_role.get('role_id')
             if role.id == role_id:
                 await self.bot.mongo_db.delete_role('persistent', role_id=role_id)
-        for bonus_token_role in bonus_token_roles:
-            role_id = bonus_token_role.get('role_id')
-            if role.id == role_id:
-                await self.bot.mongo_db.del_bonus_token_roles(role_id=role_id)
 
     @commands.Cog.listener(name='on_member_join')
     async def add_persistent_roles(self, member: Member):

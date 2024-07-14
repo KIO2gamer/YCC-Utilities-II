@@ -17,8 +17,6 @@ from motor.motor_asyncio import (
 from core.modlog import ModLogEntry
 from core.errors import ModLogNotFound
 from core.metadata import MetaData
-from resources.tokens import token_table
-from core.shop import SHOP_ITEM, item_constructor as i_c
 
 
 class MongoDBClient:
@@ -198,55 +196,6 @@ class MongoDBClient:
     async def delete_role(self, role_type: ROLE_TYPES, **kwargs) -> bool:
         result = await self.database[f'{role_type}_roles'].delete_one(kwargs, session=self.__session)
         return bool(result.deleted_count)
-
-    async def user_tokens_entry(self, user_id: int) -> dict:
-        data = await self.database.tokens.find_one({'user_id': user_id}, session=self.__session)
-
-        if data is None:
-            known_level = await self.bot.mee6.user_level(self.bot.guild_id, user_id)
-            tokens = 0
-            for i in range(1, known_level + 1):
-                tokens += token_table.get(i, 9)
-            data = {'user_id': user_id, 'tokens': tokens, 'known_level': known_level, 'bought_items': []}
-            await self.database.tokens.insert_one(data, session=self.__session)
-
-        return data
-
-    async def edit_user_tokens(self, user_id: int, token_delta: int) -> dict:
-        data = await self.user_tokens_entry(user_id)
-        data['tokens'] = max(data.get('tokens', 0) + token_delta, 0)
-        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
-        return data
-
-    async def edit_user_items(self, user_id: int, items: list[dict]) -> dict:
-        data = await self.user_tokens_entry(user_id)
-        data['bought_items'] = items
-        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
-        return data
-
-    async def update_user_level(self, user_id: int) -> dict:
-        data = await self.user_tokens_entry(user_id)
-        data['known_level'] += 1
-        data['tokens'] += token_table.get(data['known_level'], 9)
-        await self.database.tokens.find_one_and_update({'user_id': user_id}, {'$set': data}, session=self.__session)
-        return data
-
-    async def get_bonus_token_roles(self) -> list[dict]:
-        return [entry async for entry in self.database.bonus_token_roles.find({}, session=self.__session)]
-
-    async def add_bonus_token_roles(self, **kwargs) -> dict:
-        await self.database.bonus_token_roles.insert_one(kwargs, session=self.__session)
-        return kwargs
-
-    async def del_bonus_token_roles(self, **kwargs) -> bool:
-        result = await self.database.bonus_token_roles.delete_one(kwargs, session=self.__session)
-        return bool(result.deleted_count)
-
-    async def get_shop(self) -> list[SHOP_ITEM]:
-        return [i_c(self.bot, **item) async for item in self.database.shop.find({}, session=self.__session)]
-
-    async def get_shop_item(self, uiid: str) -> SHOP_ITEM | None:
-        return next((item for item in await self.get_shop() if item.uiid == uiid), None)
 
     def get_views(self) -> AsyncIterator[dict]:
         return self.database.views.find({}, session=self.__session)
