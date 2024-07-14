@@ -231,7 +231,7 @@ class UserStatistics(commands.Cog):
                 value='\n'.join([f'> <#{c}>**: `{timedelta(seconds=round(cvt[c]))}`**' for c in list(cvt)[:5]]) or nd,
                 inline=False)
 
-        await ctx.send(ctx.author.mention, embed=topstats_embed)
+        await ctx.reply(embed=topstats_embed)
 
     @commands.command(
         name='stats',
@@ -288,7 +288,7 @@ class UserStatistics(commands.Cog):
                 value=f'> **`{timedelta(seconds=round(v_time))}`**',
                 inline=False)
 
-        await ctx.send(ctx.author.mention, embed=stats_embed)
+        await ctx.reply(embed=stats_embed)
 
     @commands.command(
         name='modstats',
@@ -322,7 +322,7 @@ class UserStatistics(commands.Cog):
                     name=self.MOD_STAT_TYPES[stat_type],
                     value=f'> **`{len([modlog for modlog in modlogs if modlog.type == stat_type]):,}`**')
 
-        await ctx.send(embed=modstats_embed)
+        await ctx.reply(embed=modstats_embed)
 
 
 async def setup(bot: CustomBot):
