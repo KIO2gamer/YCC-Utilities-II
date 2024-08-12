@@ -20,7 +20,7 @@ from components.roles import RoleView
 
 class ConfigurationCommands(commands.Cog):
 
-    CHANNEL_TYPES = Literal['appeal', 'trivia', 'suggest', 'general', 'logging']
+    CHANNEL_TYPES = Literal['appeal', 'trivia', 'suggest', 'general', 'logging', 'automod']
     ROLE_TYPES = Literal['admin', 'bot', 'senior', 'hmod', 'smod', 'rmod', 'tmod', 'helper', 'trivia', 'active']
     ROLE_TYPES_MAP = {'bot': 'Bot Admin', 'senior': 'Senior Staff', 'hmod': 'Head Mod',
                       'smod': 'Senior Mod', 'rmod': 'Moderator', 'tmod': 'Trainee Mod'}

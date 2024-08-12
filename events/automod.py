@@ -10,7 +10,9 @@ from discord import (
     HTTPException,
     Thread,
     Message,
-    Member
+    Member,
+    Embed,
+    Color
 )
 
 from main import CustomBot
@@ -76,10 +78,30 @@ class AutoModerator(commands.Cog):
 
         try:
             await message.delete()
-            await message.channel.send(f'{message.author.mention}, that link is not allowed.', delete_after=5)
         except HTTPException as error:
             logging.error(f'Failed to moderate message (ID: {message.id}) - {error}')
             return
+
+        try:
+            await channel.send(f'{author.mention}, that link is not allowed.', delete_after=5)
+        except HTTPException:
+            pass
+
+        msg_embed = Embed(color=Color.red(), description=f'{author.mention} (In {channel.mention})')
+        msg_embed.set_author(icon_url=self.bot.user.avatar or self.bot.user.default_avatar, name='Message Deleted')
+        msg_embed.set_thumbnail(url=author.avatar or author.default_avatar)
+        msg_embed.set_footer(text=f'User ID: {author.id}')
+        msg_embed.add_field(name='Message Content', value=message.content, inline=False)
+        msg_embed.add_field(name='Keyword:', value=urls[0], inline=False)
+
+        try:
+            automod_log_channel = await self.bot.metadata.get_channel('automod')
+            if not automod_log_channel:
+                return
+            # noinspection PyUnresolvedReferences
+            await automod_log_channel.send(embed=msg_embed)
+        except HTTPException as error:
+            logging.error(f'Failed to log auto-moderation - {error}')
 
         try:
             self.infraction_map[author] += 1

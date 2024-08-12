@@ -27,6 +27,7 @@ class MongoDBClient:
         'suggest_channel': None,
         'general_channel': None,
         'logging_channel': None,
+        'automod_channel': None,
 
         'admin_role': None,
         'bot_role': None,
