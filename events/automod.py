@@ -64,16 +64,36 @@ class AutoModerator(commands.Cog):
             return
 
         urls = findall(r'(https?://\S+)', message.content)
-        domains = [urlparse(url).netloc for url in urls]
+        domains = []
 
-        if not domains or await self.bot.member_clearance(author) > 1:
+        for url in urls:
+            parse_result = urlparse(url)
+            domain = parse_result.netloc
+            subdirectory = parse_result.path.split('/')[1:]
+            if domain == 'discord.com' \
+                    and len(subdirectory) >= 2 \
+                    and subdirectory[0] == 'channels' \
+                    and subdirectory[1] == str(self.bot.guild_id):
+                continue
+
+            domains.append(domain)
+
+        if not domains:
             return
-        elif [domain for domain in domains if domain in self.bot.metadata.domain_bl]:
+
+        blacklisted = [domain for domain in domains if domain in self.bot.metadata.domain_bl]
+        whitelisted = [domain for domain in domains if domain in self.bot.metadata.domain_wl]
+        not_whitelisted = [domain for domain in domains if domain not in self.bot.metadata.domain_wl]
+
+        keyword = next(a for a in (blacklisted or not_whitelisted or whitelisted))
+
+        if await self.bot.member_clearance(author) > 1:
+            return
+        elif blacklisted:
             pass
         elif [role for role in author.roles if role.id in self.bot.metadata.auto_mod_ignored_roles]:
             return
-        elif not [domain for domain in domains if domain not in self.bot.metadata.domain_wl] \
-                and channel.id in self.bot.metadata.auto_mod_ignored_channels:
+        elif not not_whitelisted and channel.id in self.bot.metadata.auto_mod_ignored_channels:
             return
 
         try:
@@ -92,7 +112,7 @@ class AutoModerator(commands.Cog):
         msg_embed.set_thumbnail(url=author.avatar or author.default_avatar)
         msg_embed.set_footer(text=f'User ID: {author.id}')
         msg_embed.add_field(name='Message Content', value=message.content, inline=False)
-        msg_embed.add_field(name='Keyword:', value=urls[0], inline=False)
+        msg_embed.add_field(name='Keyword:', value=f'**`{keyword}`**', inline=False)
 
         try:
             automod_log_channel = await self.bot.metadata.get_channel('automod')

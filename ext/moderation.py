@@ -1,3 +1,4 @@
+import logging
 from unicodedata import normalize
 from datetime import timedelta
 from random import randint
@@ -10,11 +11,13 @@ from discord import (
     PermissionOverwrite,
     HTTPException,
     Member,
+    Color,
     User,
     Role
 )
 
 from main import CustomBot
+from core.embed import CustomEmbed
 from core.context import CustomContext
 from core.errors import DurationError, ModLogNotFound
 from components.appeal import BanAppealView
@@ -132,6 +135,7 @@ class ModerationCommands(commands.Cog):
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Warned {user.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -152,6 +156,7 @@ class ModerationCommands(commands.Cog):
 
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(member, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Kicked {member.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -184,6 +189,7 @@ class ModerationCommands(commands.Cog):
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Muted {user.mention} until <t:{til}:F>:* {reason}{self._sent_map[sent]}')
 
@@ -224,6 +230,7 @@ class ModerationCommands(commands.Cog):
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Banned {user.mention}{until_str}:* {reason}{self._sent_map[sent]}')
 
@@ -287,6 +294,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
         await self._end_modlogs(member.id, 'mute', 0)
+        await self.publicise_modlog(member, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Unmuted {member.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -309,6 +317,7 @@ class ModerationCommands(commands.Cog):
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
         await self.bot.mongo_db.insert_modlog(**modlog_data)
         await self._end_modlogs(user.id, 'ban', 0)
+        await self.publicise_modlog(user, modlog_data)
 
         await self.bot.good_embed(ctx, f'*Unbanned {user.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -432,6 +441,38 @@ class ModerationCommands(commands.Cog):
             await channel.set_permissions(role, overwrite=original_overwrites[role])
 
         await self.bot.good_embed(ctx, f'*{channel.mention} has been unlocked!*')
+
+    async def publicise_modlog(self, user: User | Member, modlog_data: dict):
+        pmc = await self.bot.metadata.get_channel('public_modlog')
+        if pmc is None:
+            return
+
+        modlog_embed = CustomEmbed(
+            description=f'{user.mention} **(Case {modlog_data["case_id"]})**',
+            color=Color.blue()
+        )
+        modlog_embed.set_author(name='Modlog Created', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
+        modlog_embed.set_thumbnail(url=user.avatar or user.default_avatar)
+        modlog_embed.set_footer(text=f'User ID: {user.id}')
+
+        modlog_embed.add_field(
+            name='Reason:',
+            value=modlog_data["reason"],
+            inline=False
+        )
+        modlog_embed.add_field(
+            name='Other Details:',
+            value=f'**Type: `{modlog_data["type"].capitalize()}`**\n'
+                  f'**Duration: `{timedelta(seconds=modlog_data["duration"])}`**\n'
+                  f'**Received: `{modlog_data["received"]}`**',
+            inline=False
+        )
+
+        try:
+            # noinspection PyUnresolvedReferences
+            await pmc.send(embed=modlog_embed)
+        except (HTTPException, AttributeError) as error:
+            logging.error(f'Failed to post new Modlog entry into {pmc.id} - {error}')
 
 
 async def setup(bot: CustomBot):
