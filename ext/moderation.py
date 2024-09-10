@@ -447,6 +447,9 @@ class ModerationCommands(commands.Cog):
         if pmc is None:
             return
 
+        duration_s = modlog_data["duration"]
+        duration = 'permanent' if duration_s == self.bot.perm_duration else str(timedelta(seconds=duration_s))
+
         modlog_embed = CustomEmbed(
             description=f'{user.mention} **(Case {modlog_data["case_id"]})**',
             color=Color.blue()
@@ -463,7 +466,7 @@ class ModerationCommands(commands.Cog):
         modlog_embed.add_field(
             name='Other Details:',
             value=f'**Type: `{modlog_data["type"].capitalize()}`**\n'
-                  f'**Duration: `{timedelta(seconds=modlog_data["duration"])}`**\n'
+                  f'**Duration: `{duration}`**\n'
                   f'**Received: `{modlog_data["received"]}`**',
             inline=False
         )
