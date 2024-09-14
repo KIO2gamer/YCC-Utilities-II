@@ -18,6 +18,7 @@ from discord import (
 
 from main import CustomBot
 from core.embed import CustomEmbed
+from core.modlog import ModLogEntry
 from core.context import CustomContext
 from core.errors import DurationError, ModLogNotFound
 from components.appeal import BanAppealView
@@ -134,8 +135,8 @@ class ModerationCommands(commands.Cog):
         sent = await self._try_send(self.bot.bad_embed, user, message)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
-        await self.publicise_modlog(user, modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog)
 
         await self.bot.good_embed(ctx, f'*Warned {user.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -155,8 +156,8 @@ class ModerationCommands(commands.Cog):
         await member.kick()
 
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
-        await self.publicise_modlog(member, modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(member, modlog)
 
         await self.bot.good_embed(ctx, f'*Kicked {member.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -188,8 +189,8 @@ class ModerationCommands(commands.Cog):
         sent = await self._try_send(self.bot.bad_embed, user, message)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
-        await self.publicise_modlog(user, modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog)
 
         await self.bot.good_embed(ctx, f'*Muted {user.mention} until <t:{til}:F>:* {reason}{self._sent_map[sent]}')
 
@@ -229,8 +230,8 @@ class ModerationCommands(commands.Cog):
         await self.bot.guild.ban(user, delete_message_days=0)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent, duration=seconds)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
-        await self.publicise_modlog(user, modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog)
 
         await self.bot.good_embed(ctx, f'*Banned {user.mention}{until_str}:* {reason}{self._sent_map[sent]}')
 
@@ -292,9 +293,9 @@ class ModerationCommands(commands.Cog):
         await member.timeout(None)
 
         modlog_data = await ctx.to_modlog_data(member.id, reason=reason, received=sent)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
         await self._end_modlogs(member.id, 'mute', 0)
-        await self.publicise_modlog(member, modlog_data)
+        await self.publicise_modlog(member, modlog)
 
         await self.bot.good_embed(ctx, f'*Unmuted {member.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -315,9 +316,9 @@ class ModerationCommands(commands.Cog):
         await self.bot.guild.unban(user)
 
         modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
-        await self.bot.mongo_db.insert_modlog(**modlog_data)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
         await self._end_modlogs(user.id, 'ban', 0)
-        await self.publicise_modlog(user, modlog_data)
+        await self.publicise_modlog(user, modlog)
 
         await self.bot.good_embed(ctx, f'*Unbanned {user.mention}:* {reason}{self._sent_map[sent]}')
 
@@ -442,16 +443,16 @@ class ModerationCommands(commands.Cog):
 
         await self.bot.good_embed(ctx, f'*{channel.mention} has been unlocked!*')
 
-    async def publicise_modlog(self, user: User | Member, modlog_data: dict):
+    async def publicise_modlog(self, user: User | Member, modlog: ModLogEntry) -> None:
         pmc = await self.bot.metadata.get_channel('public_modlog')
         if pmc is None:
             return
 
-        duration_s = modlog_data["duration"]
+        duration_s = modlog.duration
         duration = 'permanent' if duration_s == self.bot.perm_duration else str(timedelta(seconds=duration_s))
 
         modlog_embed = CustomEmbed(
-            description=f'{user.mention} **(Case {modlog_data["case_id"]})**',
+            description=f'{user.mention} **(Case {modlog.id})**',
             color=Color.blue()
         )
         modlog_embed.set_author(name='Modlog Created', icon_url=self.bot.user.avatar or self.bot.user.default_avatar)
@@ -460,14 +461,14 @@ class ModerationCommands(commands.Cog):
 
         modlog_embed.add_field(
             name='Reason:',
-            value=modlog_data["reason"],
+            value=modlog.reason,
             inline=False
         )
         modlog_embed.add_field(
             name='Other Details:',
-            value=f'**Type: `{modlog_data["type"].capitalize()}`**\n'
+            value=f'**Type: `{modlog.type.capitalize()}`**\n'
                   f'**Duration: `{duration}`**\n'
-                  f'**Received: `{modlog_data["received"]}`**',
+                  f'**Received: `{modlog.received}`**',
             inline=False
         )
 
