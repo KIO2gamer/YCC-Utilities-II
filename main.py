@@ -74,6 +74,9 @@ class CustomBot(commands.Bot):
 
         self.add_check(enforce_clearance, call_once=True)
 
+        self.loops: list[tasks.Loop] = [self.modlogs_tasks, self.init_status]
+        self.extension_folders: list[str] = ['./ext', './events']
+
     def convert_duration(self, duration: str, allow_any_duration: bool = False) -> timedelta:
         try:
             td = timedelta(seconds=int(duration[:-1]) * self._duration_mapping[duration[-1:].lower()])
@@ -328,7 +331,7 @@ class CustomBot(commands.Bot):
 
         self.metadata = await self.mongo_db.get_metadata()
 
-        for loop in self.modlogs_tasks, self.init_status:
+        for loop in self.loops:
             loop.add_exception_type(Exception)
             loop.start()
 
@@ -344,7 +347,7 @@ class CustomBot(commands.Bot):
 
         async def _run_bot():
             async with self, MongoDBClient(self, config.MONGO) as self.mongo_db:
-                for folder in ('./ext', './events'):
+                for folder in self.extension_folders:
                     for file in os.listdir(folder):
                         if file.endswith('.py'):
                             extension = f'{folder[2:]}.{file[:-3]}'

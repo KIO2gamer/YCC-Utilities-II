@@ -10,7 +10,6 @@ from discord import (
 )
 
 
-# noinspection PyUnusedLocal,PyUnresolvedReferences
 class Paginator(ui.View):
 
     def __init__(self, author: User | Member | None, message: Message, embeds: list[Embed]):
@@ -28,32 +27,34 @@ class Paginator(ui.View):
         self.next_page.disabled = self.last_page.disabled = self.current_page == len(self.embeds)
 
     async def edit_page(self, interaction: Interaction):
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer()
         self.update_buttons()
         await self.message.edit(embed=self.embeds[self.current_page - 1], view=self)
 
     @ui.button(label='<<')
-    async def firs_page(self, interaction: Interaction, button):
+    async def firs_page(self, interaction: Interaction, _):
         self.current_page = 1
         await self.edit_page(interaction)
 
     @ui.button(label='<', style=ButtonStyle.blurple)
-    async def prev_page(self, interaction: Interaction, button):
+    async def prev_page(self, interaction: Interaction, _):
         self.current_page -= 1
         await self.edit_page(interaction)
 
     @ui.button(label='>', style=ButtonStyle.blurple)
-    async def next_page(self, interaction: Interaction, button):
+    async def next_page(self, interaction: Interaction, _):
         self.current_page += 1
         await self.edit_page(interaction)
 
     @ui.button(label='>>')
-    async def last_page(self, interaction: Interaction, button):
+    async def last_page(self, interaction: Interaction, _):
         self.current_page = len(self.embeds)
         await self.edit_page(interaction)
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         if interaction.user != self.author:
+            # noinspection PyUnresolvedReferences
             await interaction.response.send_message('You can\'t use that.', ephemeral=True)
             return False
         return True

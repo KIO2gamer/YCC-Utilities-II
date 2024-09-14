@@ -18,8 +18,8 @@ class RoleButton(Button):
 
         self.role = role
 
-    # noinspection PyUnresolvedReferences
     async def callback(self, interaction: Interaction) -> None:
+        # noinspection PyUnresolvedReferences
         await interaction.response.defer(thinking=True, ephemeral=True)
 
         try:
