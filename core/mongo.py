@@ -28,6 +28,7 @@ class MongoDBClient:
         'general_channel': None,
         'logging_channel': None,
         'automod_channel': None,
+        'public_modlog_channel': None,
 
         'admin_role': None,
         'bot_role': None,
