@@ -74,8 +74,8 @@ class CustomBot(commands.Bot):
 
         self.add_check(enforce_clearance, call_once=True)
 
-        self.loops: list[tasks.Loop] = [self.modlogs_tasks, self.init_status]
-        self.extension_folders: list[str] = ['./ext', './events']
+        self.loops: tuple[tasks.Loop, ...] = (self.modlogs_tasks, self.init_status)
+        self.extension_folders: tuple[str, ...] = ('./ext', './events')
 
     def convert_duration(self, duration: str, allow_any_duration: bool = False) -> timedelta:
         try:
