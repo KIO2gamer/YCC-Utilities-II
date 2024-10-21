@@ -309,10 +309,12 @@ class MiscellaneousCommands(commands.Cog):
 
         if role in member.roles:
             await member.remove_roles(role)
+            r = 'Removed', 'from'
         else:
             await member.add_roles(role)
+            r = 'Added', 'to'
 
-        await self.bot.good_embed(ctx, f'*Removed {role.mention} from {member.mention}.*')
+        await self.bot.good_embed(ctx, f'*{r[0]} {role.mention} {r[1]} {member.mention}.*')
 
 
 async def setup(bot: CustomBot):
