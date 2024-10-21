@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from discord.ext import commands
 from discord import (
+    Member,
     Role,
     User
 )
@@ -17,6 +18,16 @@ class MiscellaneousCommands(commands.Cog):
 
     COMMAND_EXISTS = '`{0}` is already an existing command name/alias.'
     ACTIONS = Literal['note', 'dm', 'warn', 'kick', 'mute', 'ban', 'unmute', 'unban']
+
+    SUBROLES = {
+        '500': 988902025167273994,
+        '1k': 725572403362660433,
+        '10k': 725567309753614418,
+        '50k': 752302110850285597,
+        '100k': 725572247196270633,
+        '1m': 738997744160473140,
+        '10m': 1004975226540544091
+    }
 
     def __init__(self, bot: CustomBot):
         self.bot = bot
@@ -280,6 +291,28 @@ class MiscellaneousCommands(commands.Cog):
         async with ctx.typing():
             self.bot.bans = [entry.user.id async for entry in self.bot.guild.bans(limit=None)]
         await self.bot.good_embed(ctx, f'*Synced `{len(self.bot.bans)}` bans.*')
+
+    @commands.command(
+        name='subrole',
+        aliases=[],
+        description='Toggles a subscriber role on the specified member.',
+        extras={'requirement': 1}
+    )
+    async def subrole(self, ctx: CustomContext, member: Member, subscribers: str):
+        await self.bot.check_target_member(member)
+
+        subscribers = subscribers.lower()
+        try:
+            role = self.bot.guild.get_role(self.SUBROLES[subscribers])
+        except KeyError:
+            return await self.bot.bad_embed(ctx, f'❌ `{subscribers}` is not a valid subscriber role.')
+
+        if role in member.roles:
+            await member.remove_roles(role)
+        else:
+            await member.add_roles(role)
+
+        await self.bot.good_embed(ctx, f'*Removed {role.mention} from {member.mention}.*')
 
 
 async def setup(bot: CustomBot):
