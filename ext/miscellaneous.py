@@ -11,6 +11,7 @@ from discord import (
 from main import CustomBot
 from core.context import CustomContext
 from core.embed import EmbedField
+from core.errors import DurationError
 from components.paginator import Paginator
 
 
@@ -122,8 +123,11 @@ class MiscellaneousCommands(commands.Cog):
         elif action in ('warn', 'kick', 'dm', 'note', 'unmute', 'unban'):
             seconds = None
         else:
-            _time_delta = self.bot.convert_duration(duration)
-            seconds = round(_time_delta.total_seconds())
+            try:
+                _time_delta = self.bot.convert_duration(duration)
+                seconds = round(_time_delta.total_seconds())
+            except DurationError:
+                seconds = self.bot.perm_duration
         await self.bot.mongo_db.insert_command(
             'custom',
             action=action,

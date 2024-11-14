@@ -208,16 +208,16 @@ class ModerationCommands(commands.Cog):
             raise Exception(f'{user.mention} is already banned.')
 
         permanent = False
-        try:
+        if duration.lower() in 'permanent':
+            permanent = True
+            _time_delta = timedelta(seconds=self.bot.perm_duration)
+        else:
             _time_delta = self.bot.convert_duration(duration)
-        except DurationError as error:
-            if duration.lower() in 'permanent':
-                permanent = True
-                _time_delta = timedelta(seconds=self.bot.perm_duration)
-            else:
-                raise error
         seconds = _time_delta.total_seconds()
         til = round(utcnow().timestamp() + seconds)
+
+        if seconds == self.bot.perm_duration:
+            permanent = True
 
         until_str = f' until <t:{til}:F>' if permanent is False else ' permanently'
         message = f'**You were banned from {self.bot.guild}{until_str} for:** {reason}'
@@ -250,16 +250,16 @@ class ModerationCommands(commands.Cog):
             raise Exception(f'{user.mention} is already blocked from viewing {channel.mention}.')
 
         permanent = False
-        try:
+        if duration.lower() in 'permanent':
+            permanent = True
+            _time_delta = timedelta(seconds=self.bot.perm_duration)
+        else:
             _time_delta = self.bot.convert_duration(duration)
-        except DurationError as error:
-            if duration.lower() in 'permanent':
-                permanent = True
-                _time_delta = timedelta(seconds=self.bot.perm_duration)
-            else:
-                raise error
         seconds = _time_delta.total_seconds()
         til = round(utcnow().timestamp() + seconds)
+
+        if seconds == self.bot.perm_duration:
+            permanent = True
 
         until_str = f' until <t:{til}:F>' if permanent is False else ''
         message = f'**You were blocked from viewing `#{channel}` in {self.bot.guild}{until_str} for:** {reason}'
