@@ -1,17 +1,10 @@
-from asyncio import sleep
+from datetime import timedelta
+
 from discord.ext import commands
+from discord.utils import utcnow, format_dt
 from discord import Message
 
 from main import CustomBot
-
-
-"""
-Custom slow mode enforcer using channel permission overwrites.
-
-Note: This was very quickly and shoddily put together.
-
-If you're reading this code and thinking about making something similar, do a better job of it than I have.
-"""
 
 
 class CustomSlowmode(commands.Cog):
@@ -19,26 +12,33 @@ class CustomSlowmode(commands.Cog):
     def __init__(self, bot: CustomBot) -> None:
         self.bot: CustomBot = bot
 
-        self.duration: int = 86400
-        self.channel_id: int = 1039886236602601512
+        self.channels: dict[int, timedelta] = {
+            1039886236602601512: timedelta(seconds=86400)
+        }
 
     @commands.Cog.listener(name="on_message")
     async def enforce_slowmode(self, message: Message) -> None:
-        """channel = message.channel
-        author = message.author
+        channel, author = message.channel, message.author
 
-        if channel.id != self.channel_id:
+        if channel.id not in self.channels:
             return
         elif author.bot:
             return
-
-        clearance = await self.bot.member_clearance(author)
-        if clearance:
+        elif await self.bot.member_clearance(author) > 0:
             return
 
-        await channel.set_permissions(author, send_messages=False)
-        await sleep(self.duration)
-        await channel.set_permissions(author, overwrite=None)"""
+        cooldown = self.channels[channel.id]
+
+        async for old_message in channel.history(limit=None, after=utcnow() - cooldown):
+            if old_message == message:
+                continue
+            elif message.author == old_message.author:
+                await message.delete()
+                await channel.send(
+                    f'*{author.mention}, you are on cooldown until {format_dt(old_message.created_at + cooldown)}!*',
+                    delete_after=5
+                )
+                break
 
 
 async def setup(bot: CustomBot) -> None:
