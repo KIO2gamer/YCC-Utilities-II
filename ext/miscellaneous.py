@@ -126,8 +126,11 @@ class MiscellaneousCommands(commands.Cog):
             try:
                 _time_delta = self.bot.convert_duration(duration)
                 seconds = round(_time_delta.total_seconds())
-            except DurationError:
-                seconds = self.bot.perm_duration
+            except DurationError as error:
+                if action == 'ban':
+                    seconds = self.bot.perm_duration
+                else:
+                    raise error
         await self.bot.mongo_db.insert_command(
             'custom',
             action=action,

@@ -24,7 +24,7 @@ class CustomSlowmode(commands.Cog):
 
     @commands.Cog.listener(name="on_message")
     async def enforce_slowmode(self, message: Message) -> None:
-        channel = message.channel
+        """channel = message.channel
         author = message.author
 
         if channel.id != self.channel_id:
@@ -38,7 +38,7 @@ class CustomSlowmode(commands.Cog):
 
         await channel.set_permissions(author, send_messages=False)
         await sleep(self.duration)
-        await channel.set_permissions(author, overwrite=None)
+        await channel.set_permissions(author, overwrite=None)"""
 
 
 async def setup(bot: CustomBot) -> None:
