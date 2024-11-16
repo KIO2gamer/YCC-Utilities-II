@@ -349,7 +349,7 @@ class ModerationCommands(commands.Cog):
     @commands.command(
         name='softban',
         aliases=['sb'],
-        description='Bans and immediately unbans a user to cleanse their message history.',
+        description='Bans/unbans a user to cleanse their message history.',
         extras={'requirement': 3}
     )
     @commands.bot_has_permissions(ban_members=True)

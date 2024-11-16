@@ -75,7 +75,7 @@ class CustomCommandEvents(commands.Cog):
                     help_embed.add_field(name='Reason:', value=f'`{reason}`', inline=False)
                     if duration_str:
                         help_embed.add_field(
-                            name='Duration:',
+                            name=f'{"Cleanse " if action == "softban" else ""}Duration:',
                             value=f'`{"permanent" if duration == self.bot.perm_duration else timedelta(seconds=duration)}`',
                             inline=False)
                     help_embed.add_field(name='Usage:', value=f'`{prefix}{custom_name} <user>`', inline=False)

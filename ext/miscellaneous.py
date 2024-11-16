@@ -166,7 +166,7 @@ class MiscellaneousCommands(commands.Cog):
         fields = [EmbedField(
             name=f'{prefix}{custom.get("shortcut")}',
             text=f'**Type:** `{custom.get("action")}`\n'
-                 f'**Duration:** `{"permanent" if custom.get("duration") == self.bot.perm_duration else timedelta(seconds=custom.get("duration")) if custom.get("duration") else None}`\n'
+                 f'**{"Cleanse " if custom.get("action") == "softban" else ""}Duration:** `{"permanent" if custom.get("duration") == self.bot.perm_duration else timedelta(seconds=custom.get("duration")) if custom.get("duration") else None}`\n'
                  f'**Reason:** {custom.get("reason")}')
             for custom in customs]
         embeds = self.bot.fields_to_embeds(fields, title='Custom Commands')
