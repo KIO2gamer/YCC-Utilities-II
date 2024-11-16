@@ -18,7 +18,7 @@ from components.paginator import Paginator
 class MiscellaneousCommands(commands.Cog):
 
     COMMAND_EXISTS = '`{0}` is already an existing command name/alias.'
-    ACTIONS = Literal['note', 'dm', 'warn', 'kick', 'mute', 'ban', 'unmute', 'unban']
+    ACTIONS = Literal['note', 'dm', 'warn', 'kick', 'mute', 'ban', 'unmute', 'unban', 'softban']
 
     SUBROLES = {
         '500': 988902025167273994,

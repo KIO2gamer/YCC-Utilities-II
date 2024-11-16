@@ -347,6 +347,41 @@ class ModerationCommands(commands.Cog):
         await self.bot.good_embed(ctx, f'*Unblocked {user.mention} from {channel.mention}:* {reason}')
 
     @commands.command(
+        name='softban',
+        aliases=['sb'],
+        description='Bans and immediately unbans a user to cleanse their message history.',
+        extras={'requirement': 3}
+    )
+    @commands.bot_has_permissions(ban_members=True)
+    async def softban(self, ctx: CustomContext, user: User, cleanse_duration: str, *, reason: str = _reason):
+        await self.bot.check_target_member(user)
+
+        if user.id in self.bot.bans:
+            raise Exception(f'{user.mention} is already banned.')
+
+        _time_delta = self.bot.convert_duration(cleanse_duration)
+        seconds = round(_time_delta.total_seconds())
+        then = round(utcnow().timestamp() - seconds)
+
+        if seconds < 0 or seconds > 604800:
+            raise Exception('Cleansing duration must be between zero seconds and one week.')
+
+        message = f'**You were kicked from {self.bot.guild} for:** {reason}'
+        sent = await self._try_send(self.bot.bad_embed, user, message)
+
+        await self.bot.guild.ban(user, delete_message_seconds=seconds)
+        await self.bot.guild.unban(user)
+
+        modlog_data = await ctx.to_modlog_data(user.id, reason=reason, received=sent)
+        modlog = await self.bot.mongo_db.insert_modlog(**modlog_data)
+        await self.publicise_modlog(user, modlog)
+
+        await self.bot.good_embed(
+            ctx,
+            f'*Softbanned {user.mention} and cleansed messages from <t:{then}:F>:* {reason}{self._sent_map[sent]}'
+        )
+
+    @commands.command(
         name='slowmode',
         aliases=['sm'],
         description='Sets a slow-mode timer for a guild channel.',
