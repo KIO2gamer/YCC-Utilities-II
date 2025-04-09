@@ -22,6 +22,18 @@ class AutoModerator(commands.Cog):
 
     MUTE_DURATION = 120
 
+    TENOR_ROLES = (
+        731988919255695432,
+        731988890189168782,
+        731988854600499236,
+        809982929022615582,
+        1041709700317728788,
+        1041665329367101450,
+        1041665743063883858,
+        1041665866980401192,
+        1041666016985489458,
+    )
+
     def __init__(self, bot: CustomBot):
         self.bot = bot
         self.infraction_map: dict[Member, int] = {}
@@ -48,7 +60,7 @@ class AutoModerator(commands.Cog):
         await self.moderate_message(message)
 
     @commands.Cog.listener()
-    async def on_message_edit(self, _: Message, after: Message):
+    async def on_message_edit(self, _, after: Message):
         await self.moderate_message(after)
 
     async def moderate_message(self, message: Message):
@@ -74,6 +86,10 @@ class AutoModerator(commands.Cog):
                     and len(subdirectory) >= 2 \
                     and subdirectory[0] == 'channels' \
                     and subdirectory[1] == str(self.bot.guild_id):
+                continue
+            elif domain == 'tenor.com' \
+                    and subdirectory[0] == 'view' \
+                    and any(role for role in author.roles if role.id in self.TENOR_ROLES):
                 continue
 
             domains.append(domain)
