@@ -82,14 +82,26 @@ class AutoModerator(commands.Cog):
             parse_result = urlparse(url)
             domain = parse_result.netloc
             subdirectory = parse_result.path.split('/')[1:]
+
             if domain == 'discord.com' \
                     and len(subdirectory) >= 2 \
                     and subdirectory[0] == 'channels' \
                     and subdirectory[1] == str(self.bot.guild_id):
                 continue
+
+            elif domain == 'cdn.discordapp.com' \
+                    and len(subdirectory) >= 2 \
+                    and subdirectory[0] == 'attachments' \
+                    and subdirectory[1] == str(self.bot.guild_id) \
+                    and any(role for role in author.roles if role.id in self.TENOR_ROLES) \
+                    and channel.permissions_for(author).attach_files:
+                continue
+
             elif domain == 'tenor.com' \
+                    and len(subdirectory) >= 1 \
                     and subdirectory[0] == 'view' \
-                    and any(role for role in author.roles if role.id in self.TENOR_ROLES):
+                    and any(role for role in author.roles if role.id in self.TENOR_ROLES) \
+                    and channel.permissions_for(author).attach_files:
                 continue
 
             domains.append(domain)
