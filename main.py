@@ -380,11 +380,11 @@ class CustomBot(commands.Bot):
 
 if __name__ == '__main__':
 
-    if __discord__ == '2.3.1':
+    if __discord__ == '2.5.2':
         bot = CustomBot()
         bot.run_bot()
 
     else:
         logging.fatal('The incorrect version of discord.py has been installed.')
         logging.fatal('Current Version: {}'.format(__discord__))
-        logging.fatal('Required: 2.3.1')
+        logging.fatal('Required: 2.5.2')
